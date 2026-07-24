@@ -1,0 +1,14 @@
+node_modules
+.npm-cache
+dist
+.next
+tsconfig.tsbuildinfo
+.DS_Store
+*.log
+
+# Secrets — credentials live here.
+# Never commit this file. See .env.example for the variable names.
+.env
+.env.local
+.env.*
+!.env.example
