@@ -1,0 +1,52 @@
+reviews:
+  profile: "assertive"
+  high_level_summary: true
+  high_level_summary_in_walkthrough: true
+  review_status: true
+  poem: false
+  path_instructions:
+    - path: "app/api/**"
+      instructions: |
+        Review every handler for authentication, authorization, same-origin protection,
+        Zod validation, safe error responses, rate limiting where relevant, and no
+        provider credentials or stack traces in responses. Flag business logic that
+        belongs in src/server/features services instead of route handlers.
+    - path: "src/server/**"
+      instructions: |
+        Enforce feature ownership and MVC boundaries. Repositories own persistence;
+        services own business rules; shared core must remain framework-independent.
+        Check for authorization bypasses, unsafe provider access, N+1 queries,
+        non-atomic multi-record writes, and stable typed error handling.
+    - path: "app/admin/**"
+      instructions: |
+        Check keyboard accessibility, labelled controls, destructive-action confirmation,
+        loading and error states, responsive layout, and that mutations call authenticated
+        server APIs rather than treating client state as persistence.
+    - path: "supabase/migrations/**"
+      instructions: |
+        Review RLS policies, foreign-key behavior, append-only audit guarantees,
+        indexes, reversible migration safety, and whether new columns are exposed
+        through public policies unintentionally.
+    - path: "tests/**"
+      instructions: |
+        Require coverage for authorization failures, malformed input, duplicate data,
+        destructive paths, and provider failure compensation. Prefer deterministic tests.
+    - path: "docs/**"
+      instructions: |
+        Check that architecture and security claims match the current implementation.
+        Flag promises of absolute security, undocumented deployment assumptions, and
+        stale routes or environment variables.
+  path_filters:
+    - "!**/.next/**"
+    - "!**/node_modules/**"
+    - "!**/dist/**"
+    - "!**/public/assets/**"
+
+  pre_merge_checks:
+    custom_checks:
+      - name: "Production verification"
+        mode: "error"
+        instructions: "The PR must keep npm run type-check, npm run test, and npm run build passing."
+      - name: "No server secrets in client code"
+        mode: "error"
+        instructions: "Reject changes that expose R2 credentials, Supabase service credentials, admin credentials, PIN hashes, or environment values through NEXT_PUBLIC variables, client components, API responses, logs, or committed files."

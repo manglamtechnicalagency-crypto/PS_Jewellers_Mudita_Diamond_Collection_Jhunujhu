@@ -2,12 +2,15 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 export async function createSupabaseServerClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) return null;
+  const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const publishableKey =
+    process.env.SUPABASE_PUBLISHABLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !publishableKey) return null;
 
   const cookieStore = await cookies();
-  return createServerClient(url, anonKey, {
+  return createServerClient(url, publishableKey, {
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll(values) {
@@ -24,6 +27,15 @@ export async function createSupabaseServerClient() {
 export async function getAdminUser() {
   const client = await createSupabaseServerClient();
   if (!client) return null;
-  const { data } = await client.auth.getUser();
-  return data.user;
+  try {
+    const { data, error } = await client.auth.getUser();
+    if (error) {
+      console.error("[supabase-server] user_lookup_failed", { errorName: error.name });
+      return null;
+    }
+    return data.user;
+  } catch (error) {
+    console.error("[supabase-server] user_lookup_failed", { errorName: error instanceof Error ? error.name : "UnknownError" });
+    return null;
+  }
 }

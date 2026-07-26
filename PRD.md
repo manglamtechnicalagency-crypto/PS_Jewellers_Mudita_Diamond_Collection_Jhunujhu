@@ -1,32 +1,32 @@
 # Project Requirements Document
 
-> **Current implementation correction — 2026-07-24:** The project is **PS Jewellers**, not Vedant Jewellers. It is a Next.js 16 + TypeScript + Tailwind client-demo storefront. Product data is static (`src/data.ts`), browser-only cart state is stored in `localStorage`, and checkout remains a clearly labelled non-payment demo. The only backend surface is the protected R2 presign route. References below to Vite, `src/pages`, Supabase, Sanity, or a live commerce backend are historical and must not be used for implementation. See `Memory.md` and `docs/security/` for the current verified state.
+> **Current implementation correction — 2026-07-26:** The project is **PS Jewellers**. It is a Next.js 16 + TypeScript + Tailwind enquiry-only showroom with a Supabase/Postgres catalogue, Cloudflare R2 media, server-rendered published data, admin CRM, dynamic pricing foundations, and a published-only sitemap. `src/data.ts` is development-only fallback; production public pages fail closed when the published catalogue is unavailable. Shortlist enquiries persist server-side before WhatsApp handoff. There is no online payment processing. Historical requirements below remain audit context; this correction and active code are authoritative.
 
 ## 1. Document Information
 
-- **Project name:** Vedant Jewellers — E-commerce Demo Website (repo name: `motion-photography-react-clone`)
+- **Project name:** PS Jewellers — Digital Showroom and WhatsApp Enquiry CRM
 - **Version:** 1.0.0 (per `package.json`)
-- **Status:** Working front-end prototype / client demo. No backend, no real commerce processing.
-- **Last updated:** 2026-07-24
+- **Status:** Working enquiry-generation storefront and admin CRM; no online payment processing.
+- **Last updated:** 2026-07-26
 - **Document owner:** Unassigned — **[OPEN QUESTION]** who owns this document going forward (agency, freelancer, or PS Jewellers internal team)?
-- **Stakeholders:** PS Jewellers / Vedant Jewellers (client), the development team producing this demo. No other stakeholders are identified in the repository.
+- **Stakeholders:** PS Jewellers (client), the development team producing this demo. No other stakeholders are identified in the repository.
 
-> **Verification note:** This PRD is reconstructed entirely from the current codebase (`src/`, `package.json`, `README.md`, `index.html`) because no pre-existing product requirements document, ticket tracker, or brief was found in the repository. Every requirement below is either **Verified** (observed directly in code) or **Assumed** (inferred business intent, explicitly marked). Nothing here should be treated as a confirmed business decision until a stakeholder signs off.
+> **Verification note:** This PRD is reconstructed from the current codebase and retained historical requirements. Current implementation statements are verified against `app/`, `src/`, `supabase/`, and `package.json`; older references to Vite, `.jsx`, `data.js` as the sole source, or a backend-less system describe the earlier prototype and are not current architecture.
 
 ## 2. Project Overview
 
-**Product summary (Verified):** A single-page React application that presents a fictional/demo luxury jewellery brand, "Vedant Jewellers" (Bikaner, Rajasthan), as a front-end-only e-commerce catalogue. It includes a home page, shop/listing page with filters and sorting, product detail pages, a client-side cart, a non-functional checkout form, a wishlist, and several static informational pages (About, Contact, FAQ, Store Locator, Order Tracking, Blog, Policies).
+**Product summary (Verified):** A Next.js App Router application that presents PS Jewellers (Jhunjhunu, Rajasthan) through a catalogue storefront and protected admin foundation. It includes home, shop, category, product, informational, cart, wishlist, and non-payment checkout experiences; public catalogue reads use published Supabase records when configured.
 
-**Business context (Assumed):** The repository name (`motion-photography-react-clone`) and README ("Editable React/Vite reconstruction of the published Framer website... clean-room React reconstruction based on the public website") indicate this project began as a rebuild of an unrelated photography portfolio site built in Framer, and was subsequently re-skinned with jewellery e-commerce content and copy. This is a verified fact about the codebase's origin, not an assumption — the original photography components and pages (`AboutStudio`, `Hero`, `JournalStrip`, `Moments`, `SelectedWork`, `Services`, `Testimonials`, `FAQ`, `PageHero`, and pages `AboutPage.jsx`, `ContactPage.jsx`, `JournalPage.jsx`, `PortfolioPage.jsx`, `ProjectPage.jsx`) still exist in `src/` but are **not imported or routed by `src/App.jsx`** — they are orphaned/dead code from the earlier template. See Architecture.md §2 for the full list.
+**Business context (Assumed):** PS Jewellers needs a polished digital showroom and a controlled catalogue-management foundation. Legacy photography-template material may remain in the repository as non-runtime archive/dead code, but it is not part of the product or current execution path.
 
-**Core problem (Assumed):** PS Jewellers / Vedant Jewellers needs a visual, interactive demonstration of what a premium jewellery e-commerce storefront could look like, to support a sales pitch, design review, or early-stage product conversation — not a production commerce system.
+**Core problem (Assumed):** PS Jewellers needs a visual, interactive demonstration of what a premium jewellery e-commerce storefront could look like, to support a sales pitch, design review, or early-stage product conversation — not a production commerce system.
 
-**Proposed solution (Verified, as implemented):** A static-content React SPA with hardcoded demo product data (`src/data.js`, 18 products), client-side state for cart/wishlist/recently-viewed persisted to `localStorage`, and no server, database, authentication, or payment integration of any kind.
+**Proposed solution (Verified, as implemented):** A Next.js storefront with Supabase SSR authentication/admin controls, a published Supabase catalogue view, optional D1 catalogue acceleration for the browser refresh endpoint, R2 media support, client-side cart/wishlist/recently-viewed state, and no payment or order-processing integration.
 
-**Product vision (Assumed):** Evolve this prototype into a real, transactable jewellery e-commerce platform for Vedant Jewellers, replacing the demo product catalogue with real inventory, wiring the checkout to a real payment gateway, and adding an admin/back-office system. This is an assumption because no such roadmap exists in the repo; it is the logical "next step" implied by the presence of cart/checkout UI. **[OPEN QUESTION]** Confirm with stakeholder whether the end goal is a production store or a permanent interactive demo/pitch asset.
+**Product vision (Assumed):** Evolve this prototype into a real, transactable jewellery e-commerce platform for PS Jewellers, replacing the demo product catalogue with real inventory, wiring the checkout to a real payment gateway, and adding an admin/back-office system. This is an assumption because no such roadmap exists in the repo; it is the logical "next step" implied by the presence of cart/checkout UI. **[OPEN QUESTION]** Confirm with stakeholder whether the end goal is a production store or a permanent interactive demo/pitch asset.
 
 **Project objectives (Assumed, pending confirmation):**
-1. Present the Vedant Jewellers brand attractively across devices.
+1. Present the PS Jewellers brand attractively across devices.
 2. Demonstrate a believable shopping flow (browse → filter → product detail → cart → checkout) without real transactions.
 3. Serve as a foundation that can later be connected to real data and payments if approved.
 
@@ -37,8 +37,8 @@
 - Showcase core e-commerce UX patterns: catalogue browsing, filtering, sorting, search, product detail, cart, wishlist, checkout form.
 
 **Secondary goals (Assumed):**
-- Keep the codebase small and dependency-light (currently only `react`, `react-dom`, `vite` — see Architecture.md).
-- Deploy easily to static hosts (Vercel and Netlify config files are both present and verified).
+- Keep clear boundaries between storefront, admin, persistence, and media integrations.
+- Deploy on a Node-compatible Next.js host, with Supabase and R2 configured for live catalogue/admin behavior.
 
 **Measurable success criteria:** None are defined anywhere in the repository. **[OPEN QUESTION — must be answered by stakeholder before Phase-based work can claim "done":]**
 - What conversion, engagement, or presentation metric defines success for this demo?
@@ -50,8 +50,8 @@ Explicitly out of scope for the **current** implementation (Verified — none of
 - Real payment processing of any kind (checkout form has no payment gateway integration; the copy explicitly states "No real payment is collected. This is only a frontend ecommerce demo.")
 - User authentication / account creation / login (the `/account` route renders static placeholder copy only)
 - Order persistence, order history, or order tracking beyond a static placeholder page
-- A backend, API, or database — all data is hardcoded in `src/data.js`
-- Real inventory management, admin dashboard, or content management system
+- Real payment processing, order persistence, and customer account workflows
+- Complete inventory/commerce operations beyond the current admin catalogue foundation
 - Email/SMS notifications of any kind
 - Real store-locator map integration (static text only)
 - The legacy photography-portfolio content (About Studio, Journal, Portfolio, Moments, Services, motion-photography Testimonials/FAQ) — this is dead code left over from the project's origin and is **not part of the current product** even though the files remain in the repo
@@ -68,7 +68,7 @@ Explicitly out of scope for the **current** implementation (Verified — none of
 
 ### 5.2 Client Stakeholder / Reviewer (PS Jewellers)
 - **Description:** The business owner or marketing decision-maker evaluating the demo.
-- **Needs:** See a professional, on-brand storefront that reflects the store's positioning (Bikaner, Rajasthan; BIS hallmark; certified diamonds; bridal focus).
+- **Needs:** See a professional, on-brand storefront that reflects the store's positioning (Jhunjhunu, Rajasthan; BIS hallmark; certified diamonds; bridal focus).
 - **Pain points (Assumed):** Needs to judge design quality and completeness quickly, without technical setup.
 - **Technical ability:** Non-technical.
 - **Main actions:** Click through the deployed demo URL, review pages on desktop and mobile.
@@ -84,7 +84,7 @@ Explicitly out of scope for the **current** implementation (Verified — none of
 
 > **Assumed** — no persona research exists in the repo. These are illustrative placeholders only and require stakeholder validation.
 
-**Priya, 29, Bridal Shopper.** Planning her wedding, researching bridal necklace sets online before visiting a Bikaner showroom in person. Wants certification and hallmark clarity, and to shortlist 3–4 designs via wishlist before her appointment.
+**Priya, 29, Bridal Shopper.** Planning her wedding, researching bridal necklace sets online before visiting a Jhunjhunu showroom in person. Wants certification and hallmark clarity, and to shortlist 3–4 designs via wishlist before her appointment.
 
 **Amit, 42, Gold Investor/Buyer.** Regularly buys gold jewellery for family occasions. Price-sensitive, compares purity (22K) and weight across pieces, sorts by price.
 
@@ -104,10 +104,10 @@ Each story reflects **currently implemented** behavior unless marked "(Future)".
 - Acceptance criteria (Verified): `ProductPage.jsx` displays a gallery (with optional hero video for the primary image), pricing with discount, product code/SKU, highlights, a spec grid (category, collection, purity, weight, stone type, occasion, hallmark, certification, plus per-product `specs`), care instructions, static trust badges, and hardcoded reviews. Related products (same category/collection) and recently-viewed products are shown.
 
 **US-4.** As a shopper, I want to add items to a cart and adjust quantities, so that I can simulate a purchase.
-- Acceptance criteria (Verified): `CartPage.jsx` lists cart items with quantity +/- controls and a running subtotal; cart state persists to `localStorage` under key `vedant-cart`.
+- Acceptance criteria (Verified): `CartPage.jsx` lists cart items with quantity +/- controls and a running subtotal; cart state persists to `localStorage` under key `ps-cart`.
 
 **US-5.** As a shopper, I want to save items to a wishlist, so that I can revisit them later.
-- Acceptance criteria (Verified): Wishlist toggle available on `ProductCard` and `ProductPage`; wishlist state persists to `localStorage` under key `vedant-wishlist`; `/wishlist` route shows only wishlisted products via `ShopPage`.
+- Acceptance criteria (Verified): Wishlist toggle available on `ProductCard` and `ProductPage`; wishlist state persists to `localStorage` under key `ps-wishlist`; `/wishlist` route shows only wishlisted products via `ShopPage`.
 
 **US-6.** As a shopper, I want to fill out a checkout form, so that I can simulate placing an order.
 - Acceptance criteria (Verified): `CheckoutPage.jsx` renders a form (name, mobile, email, address, payment method selector) that does not submit anywhere — `onSubmit` calls `event.preventDefault()` only. No order is created, stored, or transmitted. This is explicitly labeled in the UI copy as a non-functional demo.
@@ -136,10 +136,10 @@ Grouped by module. Priorities reflect what would be required if this demo become
 ### 8.2 Cart & Wishlist
 | Feature | Description | Roles | Inputs | Processing | Outputs | Validation | Errors | Permissions | Dependencies | Acceptance Criteria | Priority | Status |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Add to cart | Add product / increment quantity | Shopper | Product click | `App.jsx` `addToCart` merges into `cart` state array `{id, quantity}` | Updated cart badge count | None | None | Public | `localStorage` (`vedant-cart`) | Verified | P0 | Implemented |
+| Add to cart | Add product / increment quantity | Shopper | Product click | `App.jsx` `addToCart` merges into `cart` state array `{id, quantity}` | Updated cart badge count | None | None | Public | `localStorage` (`ps-cart`) | Verified | P0 | Implemented |
 | Update cart quantity | Increment/decrement/remove | Shopper | +/- buttons | `updateCart(id, quantity)`; quantity ≤ 0 removes item | Updated cart list & subtotal | None | None | Public | same | Verified | P0 | Implemented |
-| Wishlist toggle | Add/remove favourite | Shopper | Heart icon click | `toggleWishlist` flips membership in `wishlist` array | Wishlist badge count, `/wishlist` listing | None | None | Public | `localStorage` (`vedant-wishlist`) | Verified | P1 | Implemented |
-| Recently viewed | Track last 6 viewed products | Shopper | Product page visit | `addRecentlyViewed` unshifts id, dedupes, slices to 6 | "Recently Viewed" rail on product page | None | None | Public | `localStorage` (`vedant-recent`) | Verified | P2 | Implemented |
+| Wishlist toggle | Add/remove favourite | Shopper | Heart icon click | `toggleWishlist` flips membership in `wishlist` array | Wishlist badge count, `/wishlist` listing | None | None | Public | `localStorage` (`ps-wishlist`) | Verified | P1 | Implemented |
+| Recently viewed | Track last 6 viewed products | Shopper | Product page visit | `addRecentlyViewed` unshifts id, dedupes, slices to 6 | "Recently Viewed" rail on product page | None | None | Public | `localStorage` (`ps-recent`) | Verified | P2 | Implemented |
 
 ### 8.3 Checkout (Non-functional demo)
 | Feature | Description | Roles | Inputs | Processing | Outputs | Validation | Errors | Permissions | Dependencies | Acceptance Criteria | Priority | Status |
@@ -156,13 +156,13 @@ Grouped by module. Priorities reflect what would be required if this demo become
 
 Only modules actually present or clearly implied are listed.
 
-- **Catalogue** (Verified — implemented): product data, listing, filtering, search, detail view.
+- **Catalogue** (Verified — implemented): published database product data with a source-file fallback, listing, filtering, search, detail view, and admin foundation.
 - **Cart** (Verified — implemented, client-side only): add/update/remove, subtotal.
 - **Wishlist** (Verified — implemented, client-side only).
 - **Checkout UI** (Verified — implemented as non-functional shell).
-- **Static Content / CMS-like pages** (Verified — implemented as hardcoded JSX, not a real CMS).
-- **Authentication** (Missing — not implemented; `/account` is a placeholder).
-- **Admin Dashboard** (Missing — not implemented; no admin surface exists anywhere).
+- **Static Content / CMS-like pages** (Verified — implemented as hardcoded storefront copy; homepage hero settings are database-backed).
+- **Authentication** (Verified for admin; customer accounts are not implemented).
+- **Admin Dashboard** (Verified — protected Supabase SSR/TOTP foundation with catalogue, media, settings, taxonomy, and audit surfaces).
 - **Payments** (Missing — not implemented).
 - **Order Management** (Missing — not implemented; `/order-tracking` is a static placeholder).
 - **Notifications** (Missing — not implemented).
@@ -170,7 +170,7 @@ Only modules actually present or clearly implied are listed.
 
 ## 10. Roles and Permissions
 
-**Verified:** The application has exactly one implicit role — **Public Visitor**. There is no authentication, session, or role differentiation anywhere in the code. Every route and action is available to anyone who loads the page.
+**Verified:** Public storefront access is anonymous. Admin access uses Supabase Auth sessions, verified TOTP (`aal2`), and role checks (`super_admin`, `admin`, `editor`, `viewer`). Customer accounts and orders are not implemented.
 
 | Capability | Public Visitor | Admin (Future/Assumed) |
 |---|---|---|
@@ -215,19 +215,19 @@ No such flow exists beyond the non-functional checkout form described above.
 
 ## 12. Data Requirements
 
-**Core entity: Product** (defined in `src/data.js`, 18 hardcoded records). Verified fields per product:
+**Core entity: Product** (Supabase `products`/`catalogue_products`, with `src/data.ts` as a development fallback). The storefront maps database fields into the shared `Product` shape:
 `id, slug, name, category, collection, sku, price, offerPrice, discount, availability, hallmark, certification, purity, weight, stoneType, occasion, image, video (optional), images[], rating, reviewsCount, badge, highlights[], description, specs{}, care[], reviews[]{name, rating, comment}`
 
-**Other static entities (Verified, all hardcoded arrays/objects in `data.js`):** `categories` (14 strings), `collections` (4 objects: title, copy, image), `offers` (3 strings), `trustItems`, `testimonials` (3), `blogPosts`/`journalPosts` (3, aliased), `projects` (derived map of `products`, appears to be leftover support for the orphaned `ProjectPage.jsx`/`PortfolioPage.jsx`).
+**Other content entities:** taxonomy, media, product-media links, pages/modules, site settings, reviews, enquiries, metal rates, and audit logs are represented in Supabase migrations. Some merchandising and informational copy remains in source files.
 
 **Client-side state entities (Verified, in `localStorage`, unencrypted, no expiry):**
-- `vedant-wishlist`: array of product ids
-- `vedant-cart`: array of `{id, quantity}`
-- `vedant-recent`: array of up to 6 product ids
+- `ps-wishlist`: array of product ids
+- `ps-cart`: array of `{id, quantity}`
+- `ps-recent`: array of up to 6 product ids
 
-**Data ownership:** All product data is hardcoded in source and shipped in the client bundle. There is no data owner or update workflow — changing a product requires a code change and redeploy.
+**Data ownership:** Published product data is owned and changed through the protected admin/database workflow. `src/data.ts` remains a controlled fallback and seed-like development source; changing it alone does not replace published database records when Supabase is available.
 
-**Data retention:** `localStorage` persists indefinitely on the visitor's device until cleared; there is no server-side retention because there is no server.
+**Data retention:** Cart, wishlist, and recently viewed state persist in browser `localStorage` until cleared. Catalogue, admin, media, enquiry, review, and audit records persist in Supabase according to their schema and retention policies.
 
 **Sensitive data:** None is currently collected (checkout form fields are never transmitted or stored). **If checkout is made functional in the future**, name/mobile/email/address will become PII requiring explicit handling — see Rules.md §15 and PRD §16.
 
@@ -235,7 +235,7 @@ No such flow exists beyond the non-functional checkout form described above.
 
 ## 13. Integrations
 
-**Verified — none.** No third-party API, SDK, analytics, payment gateway, CMS, or messaging service is wired into the code. Image assets reference the public Unsplash CDN by hot-linked URL (`images.unsplash.com`) for all non-hero product photography — this is a **licensing risk**, not a real integration (see Risks §21).
+**Verified:** Supabase SSR/Auth/Postgres, Cloudflare R2 media support, optional Cloudflare D1 catalogue acceleration, and Zod validation are wired. No payment gateway, analytics, email/SMS, or customer-order service is wired.
 
 | Integration | Status |
 |---|---|
@@ -243,8 +243,8 @@ No such flow exists beyond the non-functional checkout form described above.
 | Analytics | Not integrated |
 | Email/SMS | Not integrated |
 | Maps / Store locator | Not integrated (static text) |
-| CMS | Not integrated (content hardcoded in `data.js` and JSX) |
-| Unsplash (image hotlinking) | De facto dependency; not a formal integration; must be replaced with licensed/owned photography before production use per README's own disclaimer |
+| Catalogue/content store | Supabase catalogue, taxonomy, media, settings, and admin foundation; some copy remains source-managed |
+| R2/D1 | R2 media support and optional D1 read acceleration; deployment resources remain environment-dependent |
 
 ## 14. Notifications
 
@@ -253,11 +253,11 @@ No such flow exists beyond the non-functional checkout form described above.
 ## 15. Non-Functional Requirements
 
 - **Performance:** No code-splitting, lazy loading, or image optimization is implemented. All 18 product images are Unsplash-hosted with `?w=1400` query params (no responsive `srcset`). **Measurable target: [OPEN QUESTION — none defined; recommend Lighthouse Performance ≥ 90 on mobile before production].**
-- **Scalability:** N/A at present — static SPA with no backend. Scaling considerations only apply once real data/backend are introduced.
-- **Security:** No authentication, no server, no secrets in the current build — attack surface is minimal today, but see Rules.md/Architecture.md for requirements once forms and payments become real.
+- **Scalability:** Next.js server rendering, Supabase persistence, and optional D1 read acceleration are in place; route-segment splitting and shared edge rate limiting remain future hardening.
+- **Security:** Admin authentication/authorization, RLS, server-only R2 credentials, request validation, CSRF/origin checks, and audit foundations are implemented. Payment and customer-data controls remain future scope.
 - **Accessibility:** Not audited. Header/mobile menu use `aria-label`/`aria-expanded`; most interactive elements lack focus-visible styling verification. **Target: WCAG 2.1 AA — not currently verified.**
-- **SEO:** `index.html` has a single static `<title>` and `<meta description>` for the entire SPA; there is no per-route meta tag management (no `react-helmet` or equivalent), so `/shop`, `/product/:slug`, etc. all share identical title/description. This is a real SEO gap.
-- **Reliability / Availability:** Static hosting (Vercel/Netlify configs present) implies high availability at the CDN level; no uptime target is defined.
+- **SEO:** Per-route metadata, canonical URLs, JSON-LD, robots, and sitemap generation are implemented. The sitemap queries published Supabase catalogue slugs and omits product URLs when catalogue storage is unavailable.
+- **Reliability / Availability:** Next.js server/runtime availability depends on the deployment host and configured Supabase/R2 services; no uptime target is defined.
 - **Maintainability:** Codebase is small (~2,600 lines) but contains significant dead code (see Architecture.md §2), which increases maintenance risk if not cleaned up.
 - **Browser support:** Not documented. Assume evergreen browsers (Chrome, Safari, Edge, Firefox, latest 2 versions) given the modern React/Vite stack. **[OPEN QUESTION]** IE11 or older Android WebView support is not a design goal.
 - **Device support:** CSS includes breakpoints at 1180px and 760px (Verified in `styles.css`), indicating desktop/tablet/mobile responsive intent.
@@ -266,20 +266,20 @@ No such flow exists beyond the non-functional checkout form described above.
 
 ## 16. Security Requirements
 
-**Current state (Verified):** Minimal attack surface — no server, no auth, no secrets, no data transmission. The primary risks today are client-side only (e.g., XSS if user-controlled content is ever rendered without escaping — not currently the case since React auto-escapes and no `dangerouslySetInnerHTML` is used anywhere in the codebase — verified by absence of that string in `src/`).
+**Current state (Verified):** Server-side auth, database access, RLS, API validation, origin checks, audit foundations, and server-only media credentials exist. Payment, customer accounts, and order processing remain absent.
 
 **Requirements for any future production version (not yet applicable, documented for planning):**
 - Authentication: not designed yet — **[OPEN QUESTION]**.
 - Authorization: not designed yet.
 - Input validation: must be added to the checkout form and any future account forms, both client- and server-side.
 - Password storage: N/A until accounts exist; must use a modern adaptive hash (e.g., bcrypt/argon2) when implemented.
-- Session handling: N/A until a backend exists.
+- Session handling: Supabase SSR sessions are used for admin routes; customer sessions are not implemented.
 - CSRF/XSS protection: N/A today (no state-changing server requests exist); required once a backend is added.
-- Injection prevention: N/A today (no database).
-- Rate limiting: N/A today.
-- File-upload security: N/A — no upload feature exists.
-- Secrets management: N/A today — no `.env` file or example exists in the repo at all. **[GAP]** If a payment gateway or analytics key is added later, a `.env.example` must be created and secrets must never be committed.
-- Audit logging: N/A today.
+- Injection prevention: Database access uses Supabase query builders and validated route inputs.
+- Rate limiting: R2 presigning has a shared Upstash path with a fail-closed fallback policy.
+- File-upload security: MIME/size/presign controls exist; quarantine, magic-byte verification, and malware scanning remain open.
+- Secrets management: Environment names and exposure rules are documented in `.env.example` and `docs/security/SECURITY_ENVIRONMENT.md`; values must remain server-only where required.
+- Audit logging: Database audit foundations exist for protected mutations.
 - Data privacy: No personal data is currently collected or stored server-side. If checkout becomes functional, a privacy policy update and data-handling review are required (the current `/privacy-policy` page is placeholder copy only).
 
 ## 17. Analytics and Tracking
@@ -289,7 +289,7 @@ No such flow exists beyond the non-functional checkout form described above.
 ## 18. Assumptions
 
 1. This project is a client-facing demo/pitch asset, not (yet) a production e-commerce store — **inferred from checkout copy explicitly stating "No real payment is collected."**
-2. "Vedant Jewellers" is a placeholder brand name used for this demo and may differ from the final PS Jewellers branding. **[OPEN QUESTION]**
+2. ~~"Vedant Jewellers" is a placeholder brand name.~~ **RESOLVED 2026-07-25:** the brand is **PS Jewellers**. The placeholder has been removed from all code, assets, and copy.
 3. The client wants a mobile-responsive experience (inferred from the presence of breakpoints and a mobile menu).
 4. The eventual goal may be a real transactable store — not confirmed.
 5. Product images sourced from Unsplash are placeholders only and are expected to be replaced with licensed/owned photography before any public or commercial launch (this is explicitly stated in the README's disclaimer).
@@ -297,17 +297,17 @@ No such flow exists beyond the non-functional checkout form described above.
 ## 19. Constraints
 
 - **Budget:** Unknown — not documented.
-- **Technology:** Project already committed to React 19 (via `"latest"` in `package.json`) + Vite + plain CSS, no TypeScript despite `typescript` being listed as a dependency (see Architecture.md — this is currently unused/dead weight).
+- **Technology:** Next.js 16 App Router, React 19, strict TypeScript, and Tailwind CSS; Supabase/R2 integrations are server-bound where credentials require it.
 - **Time:** Unknown — no deadline documented.
 - **Legal:** Hotlinked Unsplash imagery must be replaced or properly licensed before commercial launch; "BIS Hallmark" and "certification" claims are marketing copy for a demo and must not be presented as real certifications to real customers.
-- **Platform:** Static hosting only (Vercel/Netlify configured); no server runtime is currently provisioned.
+- **Platform:** Node-compatible Next.js hosting with Supabase and optional R2/D1 resources; deployment configuration and credentials remain environment-dependent.
 - **Team:** Unknown — not documented.
 
 ## 20. Dependencies
 
 **Internal:** None — this is a standalone repository with no shared libraries or monorepo packages.
 
-**External (Verified in `package.json`):** `react`, `react-dom`, `vite`, `@vitejs/plugin-react`, `typescript` (declared but unused — no `.ts`/`.tsx` files exist and no `tsconfig.json` is present in the repo).
+**External (Verified in `package.json`):** Next.js, React, TypeScript, Tailwind/PostCSS, Supabase SSR/client packages, AWS SDK/R2 presigning, Cloudflare, Zod, and Node test tooling.
 
 ## 21. Risks
 
@@ -336,7 +336,7 @@ Acceptance criteria for a **future production store** cannot be finalized until 
 2. Who is the confirmed document owner and business stakeholder for sign-off?
 3. Should the orphaned photography-portfolio pages/components be deleted, or is there a reason to keep them (e.g., reused on a different property)?
 4. If a real store is the goal: which payment gateway, which order-management approach, and who manages inventory (the client or a developer)?
-5. What is the correct final brand name — "Vedant Jewellers" or "PS Jewellers" — and is the Bikaner, Rajasthan location detail accurate or placeholder?
+5. ~~What is the correct final brand name?~~ **RESOLVED 2026-07-25:** brand is **PS Jewellers**; location is **Jhunjhunu, Rajasthan**. Both confirmed by the client.
 6. What is the target launch date or next review milestone?
 7. Are the Unsplash-hosted images acceptable for a private demo, or must they be replaced immediately for legal reasons even pre-launch?
 
@@ -348,6 +348,6 @@ Explicitly excluded from the current release, valid for later consideration once
 - Admin/back-office product and inventory management.
 - Real store-locator map (e.g., Google Maps embed).
 - Email/SMS order notifications.
-- Per-route SEO metadata and structured data (schema.org Product markup) for real search visibility.
+- Expanded SEO coverage and structured data as catalogue/content fields become authoritative.
 - Analytics and conversion tracking.
-- Replacing hardcoded `data.js` with a real CMS or headless commerce backend.
+- Completing the migration of remaining source-managed merchandising/content surfaces to the existing Supabase content model.

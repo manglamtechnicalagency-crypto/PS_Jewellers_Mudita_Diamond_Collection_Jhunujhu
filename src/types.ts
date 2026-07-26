@@ -35,6 +35,10 @@ export interface Product {
   rating: number;
   reviewsCount: number;
   badge: string;
+  /** Free-form search keywords: synonyms, regional names, occasions, materials. */
+  tags: string[];
+  /** True when no public price is published; the UI shows an enquiry CTA instead. */
+  priceOnRequest?: boolean;
   highlights: string[];
   description: string;
   specs: Record<string, string>;
@@ -81,4 +85,14 @@ export interface AppState {
   updateCart: (id: string, quantity: number) => void;
   toggleWishlist: (product: Product) => void;
   addRecentlyViewed: (product: Product) => void;
+}
+
+export interface HomepageSettings {
+  heroEyebrow: string;
+  heroTitle: string;
+  heroDescription: string;
+  primaryCtaLabel: string;
+  primaryCtaHref: string;
+  secondaryCtaLabel: string;
+  secondaryCtaHref: string;
 }

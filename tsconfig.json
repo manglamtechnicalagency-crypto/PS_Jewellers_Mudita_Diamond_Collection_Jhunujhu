@@ -14,6 +14,8 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+    /* Node's type stripping requires explicit .ts specifiers in test imports. */
+    "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     /* Strictness keeps both client components and route handlers safe. */
     "strict": true,

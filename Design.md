@@ -1,6 +1,6 @@
 # Design System
 
-> **Current implementation correction — 2026-07-24:** The current brand is PS Jewellers. The source of truth for UI tokens and responsive styling is `tailwind.config.ts`, `app/globals.css`, and the active `.tsx` components. References below to Vedant, Vite, `index.html`, old CSS classes, or a dark default theme are historical and must not be used to change the active interface.
+> **Current implementation correction — 2026-07-24:** The current brand is PS Jewellers. The source of truth for UI tokens and responsive styling is `tailwind.config.ts`, `app/globals.css`, and the active `.tsx` components. References below to Vedant (a retired placeholder name), Vite, `index.html`, old CSS classes, or a dark default theme are historical and must not be used to change the active interface.
 
 > **v2.0 update notice:** the visual system changed substantially in the v2 rewrite, per an explicit client requirement: **dark theme → light, gold-on-white theme**, matching a reference product-page screenshot the client supplied, and **hand-written `styles.css` → Tailwind CSS** (`tailwind.config.ts`). §4 (Color System) and §6 (Typography) below have been rewritten to reflect the new, actual tokens in `tailwind.config.ts`. Sections describing component patterns (§13–§20) still describe the v1 dark-theme markup structurally (cards, nav, forms, page templates) — the *structure* mostly carried over into the v2 JSX, but the *colors/classes* referenced in those sections are now stale and should be read as "this pattern exists, described in v1 terms" rather than literal current class names. Treat `tailwind.config.ts` and the actual `.tsx` files as the source of truth for exact values; this document is a map, not the territory.
 
@@ -21,11 +21,11 @@
 - **Existing reusable components (Verified):** `ProductCard`, buttons following the shared `.button-link`-style selector group, form controls in `CheckoutPage`, the `shop-hero`/`commerce-section` page-header pattern reused across nearly every page.
 - **Accessibility issues (Verified gaps):** No documented focus-style audit; color contrast of gold-on-dark and gold-on-cream combinations has not been formally checked against WCAG AA (see Design.md §22 and Rules.md §18).
 - **Responsive issues:** None catastrophic observed in the CSS; two breakpoints (`1180px`, `760px`) cover the transition from desktop to mobile — tablet-specific tuning between these two points is minimal (a documented simplification, not necessarily a defect).
-- **Assets that should be preserved:** The hero image/video (`vedant-hero.jpg`, `vedant-hero-video.mp4`) are the only fully-owned, locally bundled photography assets and should be preserved; all other product imagery is hotlinked from Unsplash and is a **replace-before-production** item (see PRD.md Risks).
+- **Assets that should be preserved:** The hero image/video (`ps-hero.jpg`, `ps-hero-video.mp4`) are the only fully-owned, locally bundled photography assets and should be preserved; all other product imagery is hotlinked from Unsplash and is a **replace-before-production** item (see PRD.md Risks).
 
 ## 3. Brand Identity
 
-**Not formally defined anywhere in the repository.** There is no logo file, no logo usage guideline, and no brand imagery style guide. The current "logo" is a text wordmark: `Vedant Jewellers` rendered in the header (`Header.jsx`, class `.brand`) and a large decorative italic serif wordmark ("vedant") in the footer background (`Footer.jsx`, class `.footer__wordmark`). **[OPEN QUESTION — see PRD.md §23]** Confirm final brand name and whether a real logo mark will be supplied.
+**Not formally defined anywhere in the repository.** There is no logo file, no logo usage guideline, and no brand imagery style guide. The current "logo" is a text wordmark: `PS Jewellers` rendered in the header (`src/components/Header.tsx`), with "PS" in ink and "Jewellers" in `gold-500`. The historical `Footer.jsx` decorative wordmark no longer exists. **Brand name resolved 2026-07-25: PS Jewellers.** **[OPEN QUESTION]** Whether a real logo mark will be supplied.
 
 ## 4. Color System (v2 — current, gold-on-white theme)
 

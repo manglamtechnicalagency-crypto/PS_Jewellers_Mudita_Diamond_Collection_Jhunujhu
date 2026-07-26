@@ -4,7 +4,7 @@
 
 ## 1. Purpose
 
-This file is the mandatory operating policy for every AI coding agent (and human contributor) working on this repository — the Vedant Jewellers e-commerce demo (`motion-photography-react-clone`). It exists because this codebase has a documented history of scope drift: it began as an unrelated photography-portfolio clone and was re-purposed into a jewellery e-commerce demo, leaving significant dead code behind (see Architecture.md §2). Every rule below exists to prevent that pattern from repeating.
+This file is the mandatory operating policy for every AI coding agent (and human contributor) working on this repository — the PS Jewellers e-commerce demo (`motion-photography-react-clone`). It exists because this codebase has a documented history of scope drift: it began as an unrelated photography-portfolio clone and was re-purposed into a jewellery e-commerce demo, leaving significant dead code behind (see Architecture.md §2). Every rule below exists to prevent that pattern from repeating.
 
 ## 2. Instruction Priority
 

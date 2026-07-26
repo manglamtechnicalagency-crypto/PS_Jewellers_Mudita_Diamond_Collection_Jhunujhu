@@ -1,33 +1,85 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import LogoutButton from "./_components/LogoutButton";
-import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { requireAdmin } from "@/src/lib/admin-auth";
 
-const navigation = ["Products", "Media Library", "Pages & Modules", "Metal Rates", "Enquiries", "Audit Log", "Settings"];
+const navigation = [
+  { label: "Products", href: "/admin/products" },
+  { label: "Media Library", href: "/admin/media" },
+  { label: "Catalogue settings", href: "/admin/catalogue" },
+  { label: "Site settings", href: "/admin/settings" },
+  { label: "Enquiries", href: "/admin/enquiries" },
+  { label: "Audit log", href: "/admin/audit" },
+];
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const client = await createSupabaseServerClient();
-  if (!client) {
+  const auth = await requireAdmin();
+  if (auth.error === "not_configured") {
     return <AdminSetupMessage />;
   }
-
-  const { data: userData } = await client.auth.getUser();
-  if (!userData.user) redirect("/admin/login");
-
-  const { data: profile } = await client.from("profiles").select("display_name, role").eq("id", userData.user.id).single();
-  if (!profile || !["super_admin", "admin", "editor", "viewer"].includes(profile.role)) {
+  if (auth.error === "unauthorized" || auth.error === "mfa_required")
+    redirect("/admin/login");
+  if (auth.error === "internal") return <AdminErrorMessage />;
+  if (auth.error === "forbidden")
     return <p className="p-10">Your account is not assigned an admin role.</p>;
-  }
 
-  const [products, activeProducts, enquiries, auditLogs] = await Promise.all([
-    client.from("products").select("id", { count: "exact", head: true }).is("deleted_at", null),
-    client.from("products").select("id", { count: "exact", head: true }).eq("status", "published").is("deleted_at", null),
-    client.from("enquiries").select("id", { count: "exact", head: true }).eq("status", "new"),
-    client.from("audit_logs").select("id", { count: "exact", head: true }),
-  ]);
+  // requireAdmin already resolved the profile; re-querying it here would be a
+  // second round trip on every dashboard load.
+  const client = auth.client;
+  const displayName = auth.displayName;
+  const role = auth.role;
+
+  const [products, activeProducts, media, productMedia, enquiries, auditLogs] =
+    await Promise.all([
+      client
+        .from("products")
+        .select("id", { count: "exact", head: true })
+        .is("deleted_at", null),
+      client
+        .from("products")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "published")
+        .is("deleted_at", null),
+      client
+        .from("media")
+        .select("id", { count: "exact", head: true })
+        .eq("is_active", true)
+        .is("deleted_at", null),
+      client
+        .from("product_media")
+        .select("media_id", { count: "exact", head: true }),
+      client
+        .from("enquiries")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "new"),
+      client.from("audit_logs").select("id", { count: "exact", head: true }),
+    ]);
+  if (
+    products.error ||
+    activeProducts.error ||
+    media.error ||
+    productMedia.error ||
+    enquiries.error ||
+    auditLogs.error
+  ) {
+    console.error("[admin-dashboard] data_load_failed", {
+      products: products.error?.code,
+      activeProducts: activeProducts.error?.code,
+      media: media.error?.code,
+      productMedia: productMedia.error?.code,
+      enquiries: enquiries.error?.code,
+      auditLogs: auditLogs.error?.code,
+    });
+    return <AdminErrorMessage />;
+  }
 
   const cards = [
     ["Total products", products.count ?? 0],
     ["Published", activeProducts.count ?? 0],
+    ["Active media", media.count ?? 0],
+    ["Product-linked media", productMedia.count ?? 0],
     ["New enquiries", enquiries.count ?? 0],
     ["Audit events", auditLogs.count ?? 0],
   ];
@@ -37,17 +89,108 @@ export default async function AdminPage() {
       <div className="mx-auto flex max-w-[1440px] flex-col lg:flex-row">
         <aside className="border-b border-line bg-white px-6 py-6 lg:min-h-screen lg:w-64 lg:border-b-0 lg:border-r">
           <div className="flex items-center justify-between lg:block">
-            <div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">PS Jewellers</p><p className="mt-2 font-serif text-2xl">Control panel</p></div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">
+                PS Jewellers
+              </p>
+              <p className="mt-2 font-serif text-2xl">Control panel</p>
+            </div>
             <LogoutButton />
           </div>
-          <nav className="mt-10 grid grid-cols-2 gap-2 lg:grid-cols-1" aria-label="Admin navigation">
-            {navigation.map((item, index) => <a key={item} href={index === 0 ? "/admin/products" : "#"} className={`rounded-xs px-3 py-2.5 text-sm ${index === 0 ? "bg-gold-50 font-semibold text-gold-900" : "text-ink-soft hover:bg-cream"}`}>{item}</a>)}
+          <nav
+            className="mt-10 grid grid-cols-2 gap-2 lg:grid-cols-1"
+            aria-label="Admin navigation"
+          >
+            {navigation.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="rounded-xs px-3 py-2.5 text-sm text-ink-soft hover:bg-cream"
+              >
+                {item.label}
+              </Link>
+            ))}
           </nav>
         </aside>
         <section className="flex-1 px-5 py-8 lg:px-10 lg:py-12">
-          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">Dashboard</p><h1 className="mt-2 font-serif text-4xl">Good to see you, {profile.display_name || "admin"}.</h1></div><span className="text-sm text-muted">Role: {profile.role}</span></div>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{cards.map(([label, value]) => <article key={label} className="rounded-xs border border-line bg-white p-5"><p className="text-sm text-muted">{label}</p><p className="mt-3 font-serif text-3xl">{value}</p></article>)}</div>
-          <div className="mt-8 rounded-xs border border-line bg-white p-6"><h2 className="font-serif text-2xl">Admin foundation ready</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-ink-soft">Products, media, page modules, taxonomy, metal rates, enquiries, and immutable audit records are now represented in the Supabase migration. Complete the migration and assign a role before using mutation screens.</p></div>
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">
+                Dashboard
+              </p>
+              <h1 className="mt-2 font-serif text-4xl">
+                Good to see you, {displayName || "admin"}.
+              </h1>
+            </div>
+            <span className="text-sm text-muted">Role: {role}</span>
+          </div>
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+            {cards.map(([label, value]) => (
+              <article
+                key={label}
+                className="rounded-xs border border-line bg-white p-5"
+              >
+                <p className="text-sm text-muted">{label}</p>
+                <p className="mt-3 font-serif text-3xl">{value}</p>
+              </article>
+            ))}
+          </div>
+          <div className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+            <section className="rounded-xs border border-line bg-white p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">
+                Next action
+              </p>
+              <h2 className="mt-2 font-serif text-2xl">
+                {products.count
+                  ? "Keep the storefront current"
+                  : "Start the live catalogue"}
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-soft">
+                {products.count
+                  ? `${activeProducts.count ?? 0} products are published and ${media.count ?? 0} media assets are active. Update products or replace live images from the management screens.`
+                  : "The database is ready, but it has no products yet. Add the first product, then attach its images or video from the media library."}
+              </p>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <Link
+                  href="/admin/products"
+                  className="rounded-xs bg-ink px-4 py-3 text-sm font-semibold text-white hover:bg-gold-500"
+                >
+                  {products.count ? "Manage products" : "Add first product"}
+                </Link>
+                <Link
+                  href="/admin/media"
+                  className="rounded-xs border border-line px-4 py-3 text-sm font-semibold text-ink hover:border-gold-500"
+                >
+                  Open media library
+                </Link>
+              </div>
+            </section>
+            <section className="rounded-xs border border-line bg-white p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">
+                System status
+              </p>
+              <ul className="mt-4 space-y-4 text-sm">
+                <li className="flex items-center justify-between">
+                  <span>Supabase database</span>
+                  <span className="font-semibold text-green-700">
+                    Connected
+                  </span>
+                </li>
+                <li className="flex items-center justify-between">
+                  <span>Catalogue</span>
+                  <span className="font-semibold text-ink-soft">
+                    {products.count ? "Populated" : "Empty"}
+                  </span>
+                </li>
+                <li className="flex items-center justify-between">
+                  <span>Media records</span>
+                  <span className="font-semibold text-ink-soft">
+                    {media.count ? "Available" : "Empty"}
+                  </span>
+                </li>
+              </ul>
+            </section>
+          </div>
         </section>
       </div>
     </main>
@@ -55,5 +198,37 @@ export default async function AdminPage() {
 }
 
 function AdminSetupMessage() {
-  return <main className="min-h-screen bg-cream px-5 py-16"><div className="mx-auto max-w-xl rounded-xs border border-line bg-white p-8"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">PS Jewellers</p><h1 className="mt-3 font-serif text-4xl">Admin setup required</h1><p className="mt-4 text-sm leading-6 text-ink-soft">The admin panel is server-protected, but Supabase is not configured in this environment. Add the documented variables, run the migration in `supabase/migrations/0001_admin_foundation.sql`, enable TOTP MFA, and assign an admin role.</p></div></main>;
+  return (
+    <main className="min-h-screen bg-cream px-5 py-16">
+      <div className="mx-auto max-w-xl rounded-xs border border-line bg-white p-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">
+          PS Jewellers
+        </p>
+        <h1 className="mt-3 font-serif text-4xl">Admin setup required</h1>
+        <p className="mt-4 text-sm leading-6 text-ink-soft">
+          The admin panel is server-protected, but Supabase is not configured in
+          this environment. Add the documented variables, run the migration in
+          `supabase/migrations/0001_admin_foundation.sql`, enable TOTP MFA, and
+          assign an admin role.
+        </p>
+      </div>
+    </main>
+  );
+}
+
+function AdminErrorMessage() {
+  return (
+    <main className="min-h-screen bg-cream px-5 py-16">
+      <div className="mx-auto max-w-xl rounded-xs border border-line bg-white p-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">
+          PS Jewellers
+        </p>
+        <h1 className="mt-3 font-serif text-4xl">Admin data unavailable</h1>
+        <p className="mt-4 text-sm leading-6 text-ink-soft">
+          We could not load the admin data right now. Check the Supabase
+          configuration and try again.
+        </p>
+      </div>
+    </main>
+  );
 }

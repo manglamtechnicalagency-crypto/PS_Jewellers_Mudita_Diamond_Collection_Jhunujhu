@@ -1,6 +1,7 @@
 import SiteLayout from "../components/SiteLayout";
 import { blogPosts, trustItems } from "../data";
 import type { AppState } from "../types";
+import Image from "next/image";
 
 export type SimplePageType =
   | "account"
@@ -21,17 +22,17 @@ interface SimplePageProps {
 }
 
 const copy: Record<SimplePageType, [string, string]> = {
-  account: ["My Account", "Login/profile UI placeholder for the ecommerce demo. Customers can review wishlist, cart and order status in a real build."],
-  tracking: ["Order Tracking", "Track jewellery orders with demo status, insured delivery notes and showroom support."],
-  store: ["Store Locator", "PS Jewellers, Bikaner, Rajasthan. Visit the showroom for bridal consultation, gold jewellery and diamond collections."],
+  account: ["My Account", "Sign-in is coming soon. For now your wishlist, bag and recently viewed pieces are saved on this device."],
+  tracking: ["Order Tracking", "Reserved a piece? Call or WhatsApp the showroom with your reservation reference and we will confirm its status."],
+  store: ["Store Locator", "PS Jewellers, Jhunjhunu, Rajasthan. Visit the showroom for bridal consultation, gold jewellery and diamond collections."],
   appointment: ["Book Appointment", "Reserve a private jewellery consultation for bridal sets, diamond rings, or gold investment pieces."],
-  about: ["About PS Jewellers", "A premium jewellery ecommerce demo built around trust, hallmarking, certified diamonds and elegant retail presentation."],
-  contact: ["Contact", "Speak with PS Jewellers for product enquiries, appointments and showroom visits in Bikaner."],
-  faq: ["FAQ", "Common questions about hallmarking, demo pricing, cart flow, checkout UI, exchange policy and product certification."],
-  privacy: ["Privacy Policy", "Demo privacy content for customer data, enquiries, wishlist, cart and appointment forms."],
-  terms: ["Terms & Conditions", "Demo website terms for product information, pricing, offers and showroom consultation."],
-  returns: ["Return Policy", "Demo return and exchange policy for hallmarked jewellery and certified diamonds."],
-  blog: ["Blog", "Jewellery buying guides, styling notes and customer education content for the ecommerce demo."],
+  about: ["About PS Jewellers", "PS Jewellers serves Jhunjhunu with BIS hallmarked gold, certified diamonds and handcrafted 925 silver. Every piece is photographed in our own studio and listed with its weight and hallmarking."],
+  contact: ["Contact", "Speak with PS Jewellers for product enquiries, appointments and showroom visits in Jhunjhunu."],
+  faq: ["FAQ", "Common questions about hallmarking, pricing, reservations, exchange and certification."],
+  privacy: ["Privacy Policy", "How PS Jewellers handles enquiry details, appointment requests and the wishlist stored on your device."],
+  terms: ["Terms & Conditions", "Terms covering product information, pricing, reservations and showroom consultations."],
+  returns: ["Return Policy", "Exchange and buy-back terms for hallmarked gold, certified diamonds and silver jewellery."],
+  blog: ["Blog", "Buying guides, styling notes and care advice for gold, diamond and silver jewellery."],
 };
 
 export default function SimplePage({ appState, type }: SimplePageProps) {
@@ -39,11 +40,11 @@ export default function SimplePage({ appState, type }: SimplePageProps) {
 
   return (
     <SiteLayout appState={appState}>
-      <section className="border-b border-line bg-cream px-5 py-12 lg:px-10">
+      <section className="border-b border-line bg-cream px-4 py-10 sm:px-5 sm:py-12 lg:px-10">
         <div className="mx-auto max-w-content">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gold-600">PS Jewellers</p>
-          <h1 className="mt-2 font-serif text-4xl text-ink sm:text-5xl">{title}</h1>
-          <p className="mt-2 text-ink-soft">{text}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600 sm:text-sm">PS Jewellers</p>
+          <h1 className="mt-2 font-serif text-3xl text-ink sm:text-4xl lg:text-5xl">{title}</h1>
+          <p className="mt-2 text-sm text-ink-soft sm:text-base">{text}</p>
         </div>
       </section>
 
@@ -52,7 +53,7 @@ export default function SimplePage({ appState, type }: SimplePageProps) {
           <div className="grid gap-8 sm:grid-cols-3">
             {blogPosts.map((post) => (
               <article key={post.title} className="rounded-xs border border-line bg-white p-4">
-                <img src={post.image} alt="" className="mb-4 aspect-video w-full rounded-xs object-cover" />
+                <Image src={post.image} alt="" width={640} height={360} sizes="(max-width: 640px) 100vw, 33vw" className="mb-4 aspect-video w-full rounded-xs object-cover" />
                 <p className="text-xs font-semibold uppercase tracking-wide text-gold-600">{post.date}</p>
                 <h2 className="mt-1 font-serif text-lg text-ink">{post.title}</h2>
                 <span className="mt-2 inline-block text-sm text-gold-600">Read article</span>
@@ -73,7 +74,7 @@ export default function SimplePage({ appState, type }: SimplePageProps) {
             {trustItems.map((item) => (
               <div key={item} className="text-center">
                 <strong className="block font-serif text-lg text-gold-600">{item}</strong>
-                <span className="text-xs text-muted">PS Jewellers demo assurance</span>
+                <span className="text-xs text-muted">PS Jewellers assurance</span>
               </div>
             ))}
           </div>

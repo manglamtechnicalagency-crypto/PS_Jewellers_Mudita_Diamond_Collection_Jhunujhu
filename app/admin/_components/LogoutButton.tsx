@@ -1,13 +1,26 @@
 "use client";
 
+import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase/browser";
 
 export default function LogoutButton() {
+  const [error, setError] = useState(false);
+  const [pending, setPending] = useState(false);
+
   async function logout() {
-    const client = createSupabaseBrowserClient();
-    await client?.auth.signOut();
-    window.location.assign("/admin/login");
+    setError(false);
+    setPending(true);
+    try {
+      const client = createSupabaseBrowserClient();
+      if (!client) throw new Error("not_configured");
+      const { error: signOutError } = await client.auth.signOut();
+      if (signOutError) throw signOutError;
+      window.location.assign("/admin/login");
+    } catch {
+      setError(true);
+      setPending(false);
+    }
   }
 
-  return <button onClick={logout} className="text-sm text-ink-soft hover:text-gold-600">Log out</button>;
+  return <div className="flex items-center gap-3"><button onClick={logout} disabled={pending} className="text-sm text-ink-soft hover:text-gold-600 disabled:opacity-50">{pending ? "Logging out…" : "Log out"}</button>{error ? <span role="alert" className="text-xs text-red-700">Logout failed</span> : null}</div>;
 }

@@ -1,5 +1,6 @@
 import { formatPrice } from "../data";
 import type { AppState, Product } from "../types";
+import Image from "next/image";
 
 interface ProductCardProps {
   product: Product;
@@ -13,23 +14,25 @@ export default function ProductCard({ product, appState, compact = false }: Prod
   return (
     <article className="group flex flex-col overflow-hidden rounded-xs border border-line bg-white shadow-card transition-shadow hover:shadow-elevated">
       <a className="relative block aspect-square overflow-hidden bg-cream" href={`/product/${product.slug}`}>
-        <img
+        <Image
           src={product.image}
           alt={product.name}
-          loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+          fill
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 320px"
+          className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
         />
         {product.badge ? (
-          <span className="absolute left-3 top-3 rounded-full bg-ink/90 px-3 py-1 text-[11px] font-medium uppercase tracking-wide text-white">
+          <span className="absolute left-2 top-2 rounded-full bg-ink/90 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white sm:left-3 sm:top-3 sm:px-3 sm:py-1 sm:text-[11px]">
             {product.badge}
           </span>
         ) : null}
       </a>
-      <div className={`flex flex-1 flex-col gap-2 p-4 ${compact ? "p-3" : ""}`}>
+
+      <div className={`flex flex-1 flex-col gap-2 p-3 sm:p-4 ${compact ? "sm:p-3" : ""}`}>
         <div className="flex items-start justify-between gap-2">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-gold-600">{product.category}</p>
-            <h3 className={`font-serif text-ink ${compact ? "text-lg" : "text-xl"}`}>
+          <div className="min-w-0">
+            <p className="truncate text-[10px] font-medium uppercase tracking-wide text-gold-600 sm:text-xs">{product.category}</p>
+            <h3 className={`font-serif leading-snug text-ink ${compact ? "text-base sm:text-lg" : "text-base sm:text-xl"}`}>
               <a href={`/product/${product.slug}`} className="hover:text-gold-600">
                 {product.name}
               </a>
@@ -39,7 +42,7 @@ export default function ProductCard({ product, appState, compact = false }: Prod
             type="button"
             aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
             onClick={() => appState?.toggleWishlist(product)}
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors ${
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm transition-colors ${
               wished ? "border-gold-500 bg-gold-500 text-white" : "border-line text-ink-soft hover:border-gold-500 hover:text-gold-600"
             }`}
           >
@@ -47,29 +50,35 @@ export default function ProductCard({ product, appState, compact = false }: Prod
           </button>
         </div>
 
-        <div className="flex items-baseline gap-2">
-          <strong className="font-serif text-lg text-ink">{formatPrice(product.offerPrice)}</strong>
-          <span className="text-sm text-muted line-through">{formatPrice(product.price)}</span>
-          <em className="text-xs font-semibold not-italic text-gold-600">{product.discount}</em>
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          {product.priceOnRequest ? (
+            <strong className="font-serif text-base text-gold-600 sm:text-lg">Price on request</strong>
+          ) : (
+            <>
+              <strong className="font-serif text-base text-ink sm:text-lg">{formatPrice(product.offerPrice)}</strong>
+              <span className="text-xs text-muted line-through sm:text-sm">{formatPrice(product.price)}</span>
+              <em className="text-[11px] font-semibold not-italic text-gold-600 sm:text-xs">{product.discount}</em>
+            </>
+          )}
         </div>
 
-        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+        <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-muted sm:gap-x-3 sm:text-xs">
           <span>{product.purity}</span>
           <span>{product.weight}</span>
-          <span>{product.rating} ★</span>
+          {product.reviewsCount > 0 ? <span>{product.rating} ★</span> : null}
         </div>
 
-        <div className="mt-auto flex items-center gap-2 pt-2">
+        <div className="mt-auto flex flex-col gap-2 pt-3 sm:flex-row sm:items-center">
           <button
             type="button"
             onClick={() => appState?.addToCart(product)}
-            className="flex-1 rounded-xs bg-gold-500 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gold-600"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-xs bg-gold-500 px-3 text-center text-sm font-medium text-white transition-colors hover:bg-gold-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500 focus-visible:ring-offset-2 sm:flex-1"
           >
-            Add to Cart
+            Add to Shortlist
           </button>
           <a
             href={`/product/${product.slug}`}
-            className="rounded-xs border border-line px-3 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-gold-500 hover:text-gold-600"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-xs border border-line px-3 text-center text-sm font-medium text-ink-soft transition-colors hover:border-gold-500 hover:text-gold-600 sm:w-auto sm:shrink-0"
           >
             Quick View
           </a>

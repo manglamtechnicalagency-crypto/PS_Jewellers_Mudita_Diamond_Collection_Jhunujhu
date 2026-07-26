@@ -35,16 +35,46 @@ async function readJsonBody(request: Request): Promise<unknown> {
   const declaredLength = Number(request.headers.get("content-length"));
   if (Number.isFinite(declaredLength) && declaredLength > MAX_REQUEST_BODY_BYTES) throw new Error("body_too_large");
 
-  const text = await request.text();
-  if (text.length > MAX_REQUEST_BODY_BYTES) throw new Error("body_too_large");
+  if (!request.body) throw new Error("invalid_json");
+  const reader = request.body.getReader();
+  const chunks: Buffer[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_REQUEST_BODY_BYTES) throw new Error("body_too_large");
+      chunks.push(Buffer.from(value));
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const text = Buffer.concat(chunks).toString("utf8");
   return JSON.parse(text) as unknown;
 }
 
 export async function POST(request: Request) {
   const requestId = randomUUID();
-  const limit = consumeUploadRateLimit(getTrustedClientKey(request));
+
+  const clientKey = getTrustedClientKey(request);
+  if (!clientKey.trusted || !clientKey.key) {
+    // Fail closed: without a trustworthy client identifier every caller would
+    // share one bucket, so a single client could deny uploads to everyone else.
+    console.warn("[r2-presign] untrusted_client_key", { requestId });
+    return jsonError(
+      "rate_limit_unavailable",
+      "Upload requests cannot be attributed to a client",
+      503,
+      requestId,
+      60,
+    );
+  }
+
+  const limit = await consumeUploadRateLimit(clientKey.key);
   if (limit.limited) {
-    console.warn("[r2-presign] rate_limit_exceeded", { requestId });
+    console.warn("[r2-presign] rate_limit_exceeded", { requestId, durable: limit.durable });
     return jsonError("rate_limited", "Too many upload requests", 429, requestId, limit.retryAfterSeconds);
   }
 

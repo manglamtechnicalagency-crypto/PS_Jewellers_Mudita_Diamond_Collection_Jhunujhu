@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 /**
@@ -61,4 +61,24 @@ export async function createUploadUrl(
 export async function deleteObject(objectKey: string): Promise<void> {
   const bucket = getEnv("R2_BUCKET_NAME");
   await getR2Client().send(new DeleteObjectCommand({ Bucket: bucket, Key: objectKey }));
+}
+
+export async function listObjects(prefix = "", continuationToken?: string) {
+  const bucket = getEnv("R2_BUCKET_NAME");
+  return getR2Client().send(new ListObjectsV2Command({
+    Bucket: bucket,
+    Prefix: prefix,
+    ContinuationToken: continuationToken,
+    MaxKeys: 100,
+  }));
+}
+
+export async function headObject(objectKey: string) {
+  const bucket = getEnv("R2_BUCKET_NAME");
+  return getR2Client().send(new HeadObjectCommand({ Bucket: bucket, Key: objectKey }));
+}
+
+export function publicObjectUrl(objectKey: string): string | null {
+  const base = process.env.NEXT_PUBLIC_R2_PUBLIC_URL?.replace(/\/$/, "");
+  return base ? `${base}/${objectKey.split("/").map(encodeURIComponent).join("/")}` : null;
 }

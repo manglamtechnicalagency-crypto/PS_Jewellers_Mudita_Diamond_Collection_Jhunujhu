@@ -3,6 +3,7 @@ import SiteLayout from "../components/SiteLayout";
 import ProductCard from "../components/ProductCard";
 import { categoryToPath, formatPrice, products, trustItems } from "../data";
 import type { AppState, Product } from "../types";
+import Image from "next/image";
 
 interface ProductPageProps {
   product: Product;
@@ -20,11 +21,26 @@ export default function ProductPage({ product, appState }: ProductPageProps) {
   const [activeImage, setActiveImage] = useState(product.images[0]);
 
   const related = useMemo(
-    () => products.filter((item) => item.id !== product.id && (item.category === product.category || item.collection === product.collection)).slice(0, 4),
+    () =>
+      products
+        .filter(
+          (item) =>
+            item.id !== product.id &&
+            (item.category === product.category ||
+              item.collection === product.collection),
+        )
+        .slice(0, 4),
     [product],
   );
   const recent = useMemo(
-    () => products.filter((item) => appState?.recentlyViewed?.includes(item.id) && item.id !== product.id).slice(0, 4),
+    () =>
+      products
+        .filter(
+          (item) =>
+            appState?.recentlyViewed?.includes(item.id) &&
+            item.id !== product.id,
+        )
+        .slice(0, 4),
     [appState?.recentlyViewed, product.id],
   );
 
@@ -47,57 +63,121 @@ export default function ProductPage({ product, appState }: ProductPageProps) {
 
   return (
     <SiteLayout appState={appState}>
-      <section className="mx-auto max-w-content px-5 py-8 lg:px-10 lg:py-14">
-        <nav className="mb-8 flex flex-wrap items-center gap-2 text-sm text-muted" aria-label="Breadcrumb">
-          <a href="/" className="hover:text-gold-600">Home</a>
+      <section className="mx-auto max-w-content px-4 py-6 sm:px-5 sm:py-8 lg:px-10 lg:py-14">
+        <nav
+          className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted sm:mb-8 sm:text-sm"
+          aria-label="Breadcrumb"
+        >
+          <a href="/" className="hover:text-gold-600">
+            Home
+          </a>
           <span aria-hidden="true">›</span>
-          <a href={categoryToPath[product.category] ?? "/shop"} className="hover:text-gold-600">{product.category}</a>
+          <a
+            href={categoryToPath[product.category] ?? "/shop"}
+            className="hover:text-gold-600"
+          >
+            {product.category}
+          </a>
           <span aria-hidden="true">›</span>
           <span className="font-medium text-gold-600">{product.name}</span>
         </nav>
 
-        <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
+        <div className="grid gap-8 lg:grid-cols-2 lg:gap-16">
           <div>
-            <div className="aspect-square overflow-hidden rounded-xs bg-cream">
+            <div className="relative aspect-square overflow-hidden rounded-xs bg-cream">
               {product.video && activeImage === product.images[0] ? (
-                <video src={product.video} poster={product.image} autoPlay muted loop playsInline className="h-full w-full object-cover" />
+                <video
+                  src={product.video}
+                  poster={product.image}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                  aria-label={product.name}
+                  className="h-full w-full object-cover"
+                />
               ) : (
-                <img src={activeImage} alt={product.name} className="h-full w-full object-cover" />
+                <Image
+                  src={activeImage}
+                  alt={product.name}
+                  fill
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 640px"
+                  className="object-cover"
+                />
               )}
             </div>
-            <div className="mt-4 grid grid-cols-4 gap-3">
+            <div className="mt-3 grid grid-cols-4 gap-2 sm:mt-4 sm:gap-3">
               {product.images.map((image, index) => (
                 <button
                   key={image}
                   onClick={() => setActiveImage(image)}
                   aria-label={`View image ${index + 1} of ${product.name}`}
                   aria-pressed={activeImage === image}
-                  className={`aspect-square overflow-hidden rounded-xs border transition-colors ${
-                    activeImage === image ? "border-gold-500" : "border-line hover:border-gold-300"
+                  className={`relative aspect-square overflow-hidden rounded-xs border transition-colors ${
+                    activeImage === image
+                      ? "border-gold-500"
+                      : "border-line hover:border-gold-300"
                   }`}
                 >
-                  <img src={image} alt="" className="h-full w-full object-cover" />
+                  <Image
+                    src={image}
+                    alt=""
+                    fill
+                    sizes="120px"
+                    className="object-cover"
+                  />
                 </button>
               ))}
             </div>
           </div>
 
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gold-600">Traditional Luxury</p>
-            <h1 className="mt-3 font-serif text-4xl leading-tight text-ink sm:text-5xl">{product.name}</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600 sm:text-sm">
+              Traditional Luxury
+            </p>
+            <h1 className="mt-3 font-serif text-3xl leading-tight text-ink sm:text-4xl lg:text-5xl">
+              {product.name}
+            </h1>
             <div className="my-5 h-px w-16 bg-gold-500" aria-hidden="true" />
 
-            <p className="italic text-ink-soft">“{product.description}”</p>
+            <p className="text-sm italic text-ink-soft sm:text-base">
+              “{product.description}”
+            </p>
 
-            <div className="mt-6 flex items-baseline gap-3">
-              <strong className="font-serif text-4xl text-gold-600">{formatPrice(product.offerPrice)}</strong>
-              <span className="text-sm text-muted line-through">{formatPrice(product.price)}</span>
-            </div>
-            <p className="text-xs text-muted">(Approx. Price) · {product.discount}</p>
+            {product.priceOnRequest ? (
+              <div className="mt-6">
+                <strong className="font-serif text-3xl text-gold-600 sm:text-4xl">
+                  Price on request
+                </strong>
+                <p className="mt-1 text-xs text-muted">
+                  Share your requirement and we will confirm weight, size and
+                  price.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <strong className="font-serif text-3xl text-gold-600 sm:text-4xl">
+                    {formatPrice(product.offerPrice)}
+                  </strong>
+                  <span className="text-sm text-muted line-through">
+                    {formatPrice(product.price)}
+                  </span>
+                </div>
+                <p className="text-xs text-muted">
+                  Indicative price · {product.discount}
+                </p>
+              </>
+            )}
 
             <dl className="mt-6 divide-y divide-line border-y border-line text-sm">
               {specRows.map(([label, value]) => (
-                <div key={label} className="flex items-center justify-between gap-4 py-3">
+                <div
+                  key={label}
+                  className="flex items-start justify-between gap-4 py-3"
+                >
                   <dt className="font-medium text-ink-soft">{label}</dt>
                   <dd className="text-right text-ink">{value}</dd>
                 </div>
@@ -105,47 +185,69 @@ export default function ProductPage({ product, appState }: ProductPageProps) {
             </dl>
 
             <div className="mt-4 flex items-center gap-3 text-sm text-ink-soft">
-              <span>{product.rating} ★</span>
-              <span aria-hidden="true">·</span>
-              <span>{product.reviewsCount} reviews</span>
-              <span aria-hidden="true">·</span>
+              {product.reviewsCount > 0 ? (
+                <>
+                  <span>{product.rating} ★</span>
+                  <span aria-hidden="true">·</span>
+                  <span>{product.reviewsCount} reviews</span>
+                  <span aria-hidden="true">·</span>
+                </>
+              ) : null}
               <span>{product.availability}</span>
             </div>
 
-            <div className="mt-8 flex flex-wrap gap-3">
-              <a
-                href="/contact"
-                className="rounded-xs bg-gold-500 px-8 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-gold-600"
+            <div className="mt-8 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
+              <button
+                type="button"
+                id="enquire"
+                onClick={() => {
+                  appState?.addToCart(product);
+                  window.location.assign("/checkout");
+                }}
+                className="col-span-2 inline-flex min-h-12 items-center justify-center rounded-xs bg-gold-500 px-8 text-sm font-semibold text-white transition-colors hover:bg-gold-600 sm:col-span-1"
               >
-                Enquire Now
-              </a>
-              <a
-                href={`https://wa.me/?text=${encodeURIComponent(`I'm interested in ${product.name} (${product.sku})`)}`}
-                className="rounded-xs border border-gold-500 px-8 py-3.5 text-sm font-semibold text-gold-600 transition-colors hover:bg-gold-500 hover:text-white"
+                Send Enquiry
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  appState?.addToCart(product);
+                  window.location.assign("/checkout");
+                }}
+                className="col-span-2 inline-flex min-h-12 items-center justify-center rounded-xs border border-gold-500 px-8 text-sm font-semibold text-gold-600 transition-colors hover:bg-gold-500 hover:text-white sm:col-span-1"
               >
-                WhatsApp
-              </a>
+                Review Shortlist
+              </button>
               <button
                 type="button"
                 onClick={() => appState?.addToCart(product)}
-                className="rounded-xs border border-line px-6 py-3.5 text-sm font-medium text-ink-soft transition-colors hover:border-gold-500 hover:text-gold-600"
+                className="inline-flex min-h-12 items-center justify-center rounded-xs border border-line px-6 text-sm font-medium text-ink-soft transition-colors hover:border-gold-500 hover:text-gold-600"
               >
-                Add to Cart
+                Add to Shortlist
               </button>
               <button
                 type="button"
                 onClick={() => appState?.toggleWishlist(product)}
-                className="rounded-xs border border-line px-6 py-3.5 text-sm font-medium text-ink-soft transition-colors hover:border-gold-500 hover:text-gold-600"
+                className="inline-flex min-h-12 items-center justify-center rounded-xs border border-line px-6 text-sm font-medium text-ink-soft transition-colors hover:border-gold-500 hover:text-gold-600"
               >
-                {appState?.wishlist?.includes(product.id) ? "Wishlisted ♥" : "Add to Wishlist"}
+                {appState?.wishlist?.includes(product.id)
+                  ? "Wishlisted ♥"
+                  : "Add to Wishlist"}
               </button>
             </div>
 
-            <div className="mt-10 grid grid-cols-2 gap-4 border-t border-line pt-8 sm:grid-cols-4">
+            <div className="mt-10 grid grid-cols-4 gap-3 border-t border-line pt-8 sm:gap-4">
               {featureBadges.map((feature) => (
-                <div key={feature.label} className="flex flex-col items-center gap-2 text-center">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full border border-gold-300 text-gold-600">✦</span>
-                  <span className="text-xs font-medium text-ink-soft">{feature.label}</span>
+                <div
+                  key={feature.label}
+                  className="flex flex-col items-center gap-2 text-center"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full border border-gold-300 text-gold-600">
+                    ✦
+                  </span>
+                  <span className="text-xs font-medium text-ink-soft">
+                    {feature.label}
+                  </span>
                 </div>
               ))}
             </div>
@@ -153,15 +255,27 @@ export default function ProductPage({ product, appState }: ProductPageProps) {
         </div>
       </section>
 
-      <section className="bg-cream py-16">
-        <div className="mx-auto max-w-content px-5 text-center lg:px-10">
-          <h2 className="font-serif text-3xl text-gold-600">Why You'll Love It</h2>
-          <div className="mx-auto my-4 h-px w-16 bg-gold-500" aria-hidden="true" />
-          <p className="mx-auto max-w-2xl text-ink-soft">{product.description}</p>
-          <ul className="mx-auto mt-8 grid max-w-3xl grid-cols-2 gap-x-8 gap-y-3 text-left sm:grid-cols-3">
+      <section className="bg-cream py-12 sm:py-16">
+        <div className="mx-auto max-w-content px-4 text-center sm:px-5 lg:px-10">
+          <h2 className="font-serif text-2xl text-gold-600 sm:text-3xl">
+            Why You'll Love It
+          </h2>
+          <div
+            className="mx-auto my-4 h-px w-16 bg-gold-500"
+            aria-hidden="true"
+          />
+          <p className="mx-auto max-w-2xl text-ink-soft">
+            {product.description}
+          </p>
+          <ul className="mx-auto mt-8 flex max-w-3xl flex-col flex-wrap gap-x-10 gap-y-2.5 text-left sm:flex-row sm:justify-center">
             {product.highlights.map((item) => (
-              <li key={item} className="flex items-center gap-2 text-sm text-ink-soft">
-                <span className="text-gold-500" aria-hidden="true">✓</span>
+              <li
+                key={item}
+                className="flex items-center gap-2 text-sm text-ink-soft"
+              >
+                <span className="text-gold-500" aria-hidden="true">
+                  ✓
+                </span>
                 {item}
               </li>
             ))}
@@ -169,11 +283,15 @@ export default function ProductPage({ product, appState }: ProductPageProps) {
         </div>
       </section>
 
-      <section className="mx-auto max-w-content px-5 py-16 lg:px-10">
-        <h2 className="font-serif text-2xl text-ink">Product Description</h2>
+      <section className="mx-auto max-w-content px-4 py-12 sm:px-5 sm:py-16 lg:px-10">
+        <h2 className="font-serif text-xl text-ink sm:text-2xl">
+          Product Description
+        </h2>
         <p className="mt-3 max-w-3xl text-ink-soft">{product.description}</p>
 
-        <h2 className="mt-10 font-serif text-2xl text-ink">Care Instructions</h2>
+        <h2 className="mt-10 font-serif text-2xl text-ink">
+          Care Instructions
+        </h2>
         <ul className="mt-3 list-inside list-disc space-y-1 text-ink-soft">
           {product.care.map((item) => (
             <li key={item}>{item}</li>
@@ -182,46 +300,69 @@ export default function ProductPage({ product, appState }: ProductPageProps) {
       </section>
 
       <section className="border-y border-line bg-cream py-10">
-        <div className="mx-auto grid max-w-content grid-cols-2 gap-6 px-5 sm:grid-cols-4 lg:px-10">
+        <div className="mx-auto grid max-w-content grid-cols-2 gap-5 px-4 sm:grid-cols-4 sm:gap-6 sm:px-5 lg:px-10">
           {trustItems.map((item) => (
-            <div key={item} className="text-center">
-              <strong className="block font-serif text-lg text-gold-600">{item}</strong>
+            <div key={item} className="flex flex-col justify-start text-center">
+              <strong className="block font-serif text-base leading-snug text-gold-600 sm:text-lg lg:text-base xl:text-lg">
+                {item}
+              </strong>
               <span className="text-xs text-muted">Premium PS assurance</span>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="mx-auto max-w-content px-5 py-16 lg:px-10">
-        <h2 className="font-serif text-2xl text-ink">Customer Reviews</h2>
-        <div className="mt-6 grid gap-6 sm:grid-cols-2">
-          {product.reviews.map((review) => (
-            <article key={review.name} className="rounded-xs border border-line bg-white p-6">
-              <p className="italic text-ink-soft">“{review.comment}”</p>
-              <strong className="mt-3 block text-ink">{review.name}</strong>
-              <span className="text-sm text-gold-600">{review.rating} ★</span>
-            </article>
-          ))}
-        </div>
-      </section>
+      {product.reviews.length > 0 ? (
+        <section className="mx-auto max-w-content px-4 py-12 sm:px-5 sm:py-16 lg:px-10">
+          <h2 className="font-serif text-xl text-ink sm:text-2xl">
+            Customer Reviews
+          </h2>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 sm:gap-6">
+            {product.reviews.map((review) => (
+              <article
+                key={review.name}
+                className="rounded-xs border border-line bg-white p-6"
+              >
+                <p className="italic text-ink-soft">“{review.comment}”</p>
+                <strong className="mt-3 block text-ink">{review.name}</strong>
+                <span className="text-sm text-gold-600">{review.rating} ★</span>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {related.length > 0 ? (
-        <section className="mx-auto max-w-content px-5 py-16 lg:px-10">
-          <h2 className="font-serif text-2xl text-ink">Related Products</h2>
-          <div className="mt-6 grid grid-cols-2 gap-6 lg:grid-cols-4">
+        <section className="mx-auto max-w-content px-4 py-12 sm:px-5 sm:py-16 lg:px-10">
+          <h2 className="font-serif text-xl text-ink sm:text-2xl">
+            Related Products
+          </h2>
+          <div className="mt-6 grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
             {related.map((item) => (
-              <ProductCard key={item.id} product={item} appState={appState} compact />
+              <ProductCard
+                key={item.id}
+                product={item}
+                appState={appState}
+                compact
+              />
             ))}
           </div>
         </section>
       ) : null}
 
       {recent.length > 0 ? (
-        <section className="mx-auto max-w-content px-5 pb-16 lg:px-10">
-          <h2 className="font-serif text-2xl text-ink">Recently Viewed</h2>
-          <div className="mt-6 grid grid-cols-2 gap-6 lg:grid-cols-4">
+        <section className="mx-auto max-w-content px-4 pb-12 sm:px-5 sm:pb-16 lg:px-10">
+          <h2 className="font-serif text-xl text-ink sm:text-2xl">
+            Recently Viewed
+          </h2>
+          <div className="mt-6 grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
             {recent.map((item) => (
-              <ProductCard key={item.id} product={item} appState={appState} compact />
+              <ProductCard
+                key={item.id}
+                product={item}
+                appState={appState}
+                compact
+              />
             ))}
           </div>
         </section>

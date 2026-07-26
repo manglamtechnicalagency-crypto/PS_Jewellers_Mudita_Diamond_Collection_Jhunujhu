@@ -29,3 +29,23 @@ npm run build
 ```
 
 ECC skills are available under `.agents/skills/`. Use `verification-loop` for release checks, `security-review` for API or credential changes, and `frontend-patterns` for React UI work.
+
+<!-- CAVEMAN:BEGIN -->
+
+## Response style — caveman mode, always on
+
+Active by default in this repo, every session, no command needed. Full rules and
+levels in `CLAUDE.md`. Short version:
+
+- Cut filler. No "Sure!", no "Let me…", no recap, no summary section.
+- Fragments over sentences. Verdict first, reason second.
+- One line per finding, file and line first.
+- **Never compress** code, commands, paths, URLs, env names, error text, or any
+  user-facing storefront copy — byte-for-byte exact.
+- Brevity never overrides the workflow above. Still trace the path, still flag
+  risk, still run `npm run type-check` and `npm run build`.
+- Match the user's language. Compress style, never translate.
+
+User says "normal mode" → off for that session.
+
+<!-- CAVEMAN:END -->
