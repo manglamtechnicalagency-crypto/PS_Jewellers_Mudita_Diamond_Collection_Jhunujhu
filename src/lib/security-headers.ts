@@ -41,6 +41,14 @@ export function imageSources(): string[] {
   return [...sources];
 }
 
+/** Origins video elements may load from, derived from environment. */
+export function mediaSources(): string[] {
+  const sources = new Set<string>(["'self'", "blob:"]);
+  const r2Public = originOf(process.env.NEXT_PUBLIC_R2_PUBLIC_URL);
+  if (r2Public) sources.add(r2Public);
+  return [...sources];
+}
+
 export interface CspOptions {
   /** Per-request nonce. Omit for the static fallback policy. */
   nonce?: string;
@@ -76,7 +84,7 @@ export function buildContentSecurityPolicy({ nonce, isDevelopment = false }: Csp
     // script-execution vector under this policy.
     `style-src 'self' 'unsafe-inline'`,
     `img-src ${imageSources().join(" ")}`,
-    `media-src 'self'`,
+    `media-src ${mediaSources().join(" ")}`,
     `font-src 'self' data:`,
     `connect-src ${connectSources().join(" ")}`,
     `form-action 'self'`,

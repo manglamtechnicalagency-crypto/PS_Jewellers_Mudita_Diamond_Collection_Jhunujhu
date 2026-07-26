@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildCatalogueProducts } from "../src/lib/catalogue-data.ts";
+import { products as publicProducts } from "../src/data.ts";
+
+describe("public pricing policy", () => {
+  it("keeps every public catalogue product on request-only pricing", () => {
+    assert.equal(publicProducts.length, 17);
+    assert.ok(publicProducts.every((product) => product.priceOnRequest));
+    assert.ok(publicProducts.every((product) => product.price === 0 && product.offerPrice === 0 && product.discount === ""));
+  });
+});
 
 describe("database catalogue mapping", () => {
   it("maps approved media and drops products without usable media", () => {

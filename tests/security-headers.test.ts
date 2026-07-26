@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
-import { buildContentSecurityPolicy, connectSources, imageSources } from "../src/lib/security-headers.ts";
+import { buildContentSecurityPolicy, connectSources, imageSources, mediaSources } from "../src/lib/security-headers.ts";
 
 const originalEnv = { ...process.env };
 
@@ -40,6 +40,13 @@ describe("imageSources", () => {
   it("includes the R2 public origin when configured", () => {
     process.env.NEXT_PUBLIC_R2_PUBLIC_URL = "https://media.example.com/";
     assert.ok(imageSources().includes("https://media.example.com"));
+  });
+});
+
+describe("mediaSources", () => {
+  it("includes the configured R2 origin so production videos can play", () => {
+    process.env.NEXT_PUBLIC_R2_PUBLIC_URL = "https://media.example.com/";
+    assert.ok(mediaSources().includes("https://media.example.com"));
   });
 });
 

@@ -2,13 +2,14 @@ import type { ReactNode } from "react";
 import SiteLayout from "../components/SiteLayout";
 import ProductCard from "../components/ProductCard";
 import Reveal from "../components/Reveal";
-import { assets, blogPosts, categories, categoryToPath, collections, formatPrice, offers, products, testimonials, trustItems } from "../data";
-import type { AppState, HomepageSettings } from "../types";
+import { assets, blogPosts, categories, categoryToPath, collections, formatPrice, offers, testimonials, trustItems } from "../data";
+import type { AppState, HomepageSettings, Product } from "../types";
 import Image from "next/image";
 
 interface HomePageProps {
   appState?: AppState;
   settings: HomepageSettings;
+  products: Product[];
 }
 
 function SectionTitle({ kicker, title, copy, tone = "light" }: { kicker: string; title: string; copy?: ReactNode; tone?: "light" | "dark" }) {
@@ -21,7 +22,14 @@ function SectionTitle({ kicker, title, copy, tone = "light" }: { kicker: string;
   );
 }
 
-export default function HomePage({ appState, settings }: HomePageProps) {
+export default function HomePage({ appState, settings, products }: HomePageProps) {
+  const collectionLinks: Record<string, string> = {
+    "Heritage Antique": "/silver-jewellery",
+    "Celeste Diamonds": "/diamond-jewellery",
+    "Maharani Bridal": "/gold-jewellery",
+    "Everyday Luxe": "/shop",
+    "Oxidised Heritage": "/silver-jewellery",
+  };
   const featured = products.slice(0, 8);
   const heroHighlight = products.find((product) => product.badge === "Best Seller") ?? products[0];
   const bestSellers = products.filter((product) => ["Best Seller", "Popular", "Premium", "Loved"].includes(product.badge)).slice(0, 4);
@@ -92,7 +100,7 @@ export default function HomePage({ appState, settings }: HomePageProps) {
         <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-5">
           {collections.map((collection) => (
             <Reveal key={collection.title}>
-              <a href="/shop" className="group block overflow-hidden rounded-xs border border-line bg-white shadow-card">
+              <a href={collectionLinks[collection.title] ?? "/shop"} className="group block overflow-hidden rounded-xs border border-line bg-white shadow-card">
                 <div className="relative aspect-[4/3] overflow-hidden">
                   <Image src={collection.image} alt={collection.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 340px" className="object-cover transition-transform duration-700 group-hover:scale-105" />
                 </div>

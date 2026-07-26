@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import SiteLayout from "../components/SiteLayout";
 import ProductCard from "../components/ProductCard";
-import { categories, products } from "../data";
+import { products } from "../data";
 import type { AppState, Product } from "../types";
 
 interface ShopPageProps {
@@ -12,20 +12,20 @@ interface ShopPageProps {
   emptyMessage?: string;
 }
 
-type SortKey = "featured" | "low" | "high" | "rating";
+type SortKey = "featured" | "rating";
+const metalFilters = ["Recommended", "Gold Jewellery", "Silver Jewellery", "Diamond Jewellery"];
+const typeFilters = ["Rings", "Earrings", "Necklaces"];
 
 function matchesInitial(product: Product, filter: string): boolean {
-  if (!filter) return true;
-  if (filter === "Gold") return product.category.includes("Gold") || product.purity.includes("22K") || product.purity.includes("18K");
-  // Cross-cutting metal filter: silver pieces keep their real product category
-  // (Earrings, Necklaces, Maang Tikka) and also surface here.
+  if (!filter || filter === "Recommended") return true;
+  const searchable = [product.name, product.category, product.collection, product.stoneType, ...product.tags].join(" ").toLowerCase();
+  if (filter === "Gold Jewellery") return product.purity.toLowerCase().includes("gold") || product.purity.includes("22K") || product.purity.includes("18K");
   if (filter === "Silver Jewellery") return product.purity.toLowerCase().includes("silver");
-  if (filter === "Diamond") return product.category.includes("Diamond") || product.stoneType.includes("Diamond");
-  if (filter === "Rings") return product.category.includes("Rings");
-  if (filter === "Offers") return Boolean(product.discount);
-  if (filter === "New Arrival") return product.badge === "New Arrival" || product.badge === "New";
-  if (filter === "Best Seller") return product.badge === "Best Seller" || product.badge === "Popular";
-  return product.category === filter || product.collection === filter;
+  if (filter === "Diamond Jewellery") return searchable.includes("diamond") || searchable.includes("cz") || product.collection.toLowerCase().includes("celeste");
+  if (filter === "Rings") return searchable.includes("ring") || searchable.includes("ring mount");
+  if (filter === "Earrings") return searchable.includes("earring") || searchable.includes("jhumka") || searchable.includes("tops");
+  if (filter === "Necklaces") return searchable.includes("necklace") || searchable.includes("haar") || searchable.includes("mangalsutra");
+  return false;
 }
 
 export default function ShopPage({
@@ -63,19 +63,7 @@ export default function ShopPage({
       const matchesSearch = terms.length === 0 || terms.every((term) => searchable.includes(term));
       return matchesSearch && matchesInitial(product, category);
     });
-    // Price-on-request items carry offerPrice 0, which would otherwise sort them
-    // to the very top of "low to high" and the very bottom of "high to low".
-    // Park them after the priced items in both directions instead.
-    const byPrice = (direction: 1 | -1) => (a: Product, b: Product) => {
-      if (a.priceOnRequest && b.priceOnRequest) return a.name.localeCompare(b.name);
-      if (a.priceOnRequest) return 1;
-      if (b.priceOnRequest) return -1;
-      return (a.offerPrice - b.offerPrice) * direction;
-    };
-
     return [...searched].sort((a, b) => {
-      if (sort === "low") return byPrice(1)(a, b);
-      if (sort === "high") return byPrice(-1)(a, b);
       if (sort === "rating") return b.rating - a.rating;
       return 0;
     });
@@ -105,7 +93,7 @@ export default function ShopPage({
           >
             All Jewellery
           </button>
-          {categories.map((item) => (
+          {metalFilters.map((item) => (
             <button
               key={item}
               type="button"
@@ -117,6 +105,11 @@ export default function ShopPage({
               {item}
             </button>
           ))}
+          <label className="sr-only" htmlFor="mobile-jewellery-type">Jewellery type</label>
+          <select id="mobile-jewellery-type" value={typeFilters.includes(category) ? category : ""} onChange={(event) => setCategory(event.target.value)} className="min-h-9 shrink-0 rounded-full border border-line bg-white px-4 text-sm text-ink-soft">
+            <option value="">Jewellery type</option>
+            {typeFilters.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
         </div>
       </div>
 
@@ -138,7 +131,7 @@ export default function ShopPage({
             >
               All Jewellery
             </button>
-            {categories.map((item) => (
+            {metalFilters.map((item) => (
               <button
                 key={item}
                 className={`rounded-xs px-3 py-2 text-left text-sm ${category === item ? "bg-gold-500 text-white" : "text-ink-soft hover:bg-cream"}`}
@@ -147,6 +140,11 @@ export default function ShopPage({
                 {item}
               </button>
             ))}
+            <label className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted" htmlFor="desktop-jewellery-type">Jewellery type</label>
+            <select id="desktop-jewellery-type" value={typeFilters.includes(category) ? category : ""} onChange={(event) => setCategory(event.target.value)} className="rounded-xs border border-line bg-white px-3 py-2 text-sm text-ink-soft">
+              <option value="">Rings, earrings or necklaces</option>
+              {typeFilters.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
           </div>
         </aside>
 
@@ -170,8 +168,6 @@ export default function ShopPage({
               className="min-h-11 rounded-xs border border-line bg-white px-3 text-sm text-ink"
             >
               <option value="featured">Featured</option>
-              <option value="low">Price: Low to High</option>
-              <option value="high">Price: High to Low</option>
               <option value="rating">Top Rated</option>
             </select>
           </div>

@@ -757,26 +757,25 @@ const managedProductAsset = (path: string) => path.startsWith("/assets/") ? mana
 
 export const products: Product[] = productSeed.map((product) => ({
   ...product,
+  // Public policy: showroom pricing is confirmed privately for every piece.
+  // Keep numeric values out of the client catalogue and show one consistent CTA.
+  price: 0,
+  offerPrice: 0,
+  discount: "",
+  priceOnRequest: true,
   image: managedProductAsset(product.image),
   video: product.video ? managedProductAsset(product.video) : product.video,
   images: product.images.map(managedProductAsset),
 }));
 
 export const categories: string[] = [
-  "Gold Rings",
-  "Diamond Rings",
+  "Recommended",
+  "Gold Jewellery",
+  "Silver Jewellery",
+  "Diamond Jewellery",
+  "Rings",
   "Earrings",
   "Necklaces",
-  "Chains",
-  "Pendants",
-  "Bracelets",
-  "Bangles",
-  "Mangalsutra",
-  "Maang Tikka",
-  "Nose Pin",
-  "Anklets",
-  "Bridal Jewellery",
-  "Silver Jewellery",
 ];
 
 /**
@@ -787,22 +786,13 @@ export const categories: string[] = [
  * (QA defects #1/#2, foundation rewrite).
  */
 export const categoryToPath: Record<string, string> = {
-  "Gold Rings": "/gold-jewellery",
-  "Diamond Rings": "/diamond-jewellery",
+  Recommended: "/shop",
+  "Gold Jewellery": "/gold-jewellery",
+  "Silver Jewellery": "/silver-jewellery",
+  "Diamond Jewellery": "/diamond-jewellery",
+  Rings: "/rings",
   Earrings: "/earrings",
   Necklaces: "/necklaces",
-  Chains: "/chains",
-  Pendants: "/pendants",
-  Bracelets: "/bracelets",
-  Bangles: "/bangles",
-  Mangalsutra: "/mangalsutra",
-  "Maang Tikka": "/maang-tikka",
-  "Nose Pin": "/nose-pin",
-  Anklets: "/anklets",
-  "Bridal Jewellery": "/bridal-collection",
-  // Cross-cutting metal filter, not a product type: matched on purity in
-  // `matchesInitial` so silver pieces also stay in Earrings/Necklaces.
-  "Silver Jewellery": "/silver-jewellery",
 };
 
 const collectionSeed: CollectionEntry[] = [

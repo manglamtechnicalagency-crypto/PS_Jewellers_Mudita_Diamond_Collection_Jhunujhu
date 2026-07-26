@@ -20,6 +20,7 @@ every earlier file has already run.
 | `0013_enquiry_optional_email.sql` | Allows phone-first enquiries while retaining email validation when supplied. |
 | `0014_media_replacements.sql` | Stores prior R2 keys during replacement until the new media is approved. |
 | `0015_seed_showroom_catalogue.sql` | Seeds the published showroom products and reconnects registered bundled R2 media. |
+| `0016_price_on_request_catalogue.sql` | Removes public numeric pricing and sets every active product to price-on-request mode. |
 
 ```bash
 supabase db push          # or: supabase migration up

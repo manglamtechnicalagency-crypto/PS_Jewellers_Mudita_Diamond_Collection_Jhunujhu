@@ -37,24 +37,12 @@ function normalizePath(pathname: string): string {
 
 function categoryFromPath(path: string): string | undefined {
   const map: Record<string, string> = {
-    "/gold-jewellery": "Gold",
-    "/diamond-jewellery": "Diamond",
-    "/bridal-collection": "Bridal Jewellery",
+    "/gold-jewellery": "Gold Jewellery",
+    "/diamond-jewellery": "Diamond Jewellery",
     "/rings": "Rings",
     "/necklaces": "Necklaces",
-    "/chains": "Chains",
-    "/bracelets": "Bracelets",
-    "/bangles": "Bangles",
     "/earrings": "Earrings",
-    "/pendants": "Pendants",
-    "/mangalsutra": "Mangalsutra",
-    "/maang-tikka": "Maang Tikka",
-    "/nose-pin": "Nose Pin",
-    "/anklets": "Anklets",
     "/silver-jewellery": "Silver Jewellery",
-    "/new-arrivals": "New Arrival",
-    "/best-sellers": "Best Seller",
-    "/offers": "Offers",
   };
   return map[path];
 }
@@ -223,13 +211,13 @@ export default function App({
   };
 
   if (path === "/")
-    return <HomePage appState={appState} settings={homepageSettings} />;
+    return <HomePage appState={appState} settings={homepageSettings} products={catalogueProducts} />;
   if (path === "/shop" || path === "/portfolio")
-    return <ShopPage appState={appState} />;
+    return <ShopPage appState={appState} customProducts={catalogueProducts} />;
   const filterFromCategoryPath = categoryFromPath(path);
   if (filterFromCategoryPath)
     return (
-      <ShopPage appState={appState} initialFilter={filterFromCategoryPath} />
+      <ShopPage appState={appState} initialFilter={filterFromCategoryPath} customProducts={catalogueProducts} />
     );
   if (path === "/wishlist")
     return (
