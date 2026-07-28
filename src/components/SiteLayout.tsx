@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Header from "./Header";
 import Footer from "./Footer";
+import FloatingContactButtons from "./FloatingContactButtons";
 import type { AppState } from "../types";
 
 interface SiteLayoutProps {
@@ -15,6 +16,7 @@ export default function SiteLayout({ children, appState, footer = true }: SiteLa
       <Header appState={appState} />
       <main className="flex-1">{children}</main>
       {footer && <Footer />}
+      <FloatingContactButtons />
     </div>
   );
 }
