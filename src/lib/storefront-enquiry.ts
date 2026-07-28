@@ -1,15 +1,50 @@
 import type { CartProduct, Product } from "../types";
 
 export const WHATSAPP_NUMBER = (
-  process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? ""
+  process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "919829407255"
 ).replace(/\D/g, "");
 
-export function whatsappHref(product: Product): string {
-  const message = `Hello PS Jewellers, I would like to enquire about ${product.name} (${product.sku}).`;
-  return WHATSAPP_NUMBER
-    ? `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`
-    : "/checkout";
+export function generateWhatsappMessage(
+  product: Product,
+  currentUrl?: string,
+  customerMessage?: string,
+): string {
+  const productLink = currentUrl ?? (typeof window !== "undefined" ? window.location.href : "");
+  return [
+    "Hello PS Jewellers,",
+    "",
+    "I am interested in the following jewellery.",
+    "",
+    `Product:\n${product.name}`,
+    `Category:\n${product.category}`,
+    `Purity:\n${product.purity}`,
+    `Weight:\n${product.weight}`,
+    `SKU:\n${product.sku}`,
+    `Product Link:\n${productLink}`,
+    "",
+    "Please share",
+    "• Today's Gold Price",
+    "• Making Charges",
+    "• Availability",
+    "• Hallmark Details",
+    "• More Photos",
+    "• Delivery Information",
+    customerMessage?.trim() ? `\nMy message:\n${customerMessage.trim()}` : "",
+    "",
+    "Thank you.",
+  ].filter(Boolean).join("\n");
 }
+
+export function whatsappHref(
+  product: Product,
+  phoneNumber = WHATSAPP_NUMBER,
+  currentUrl?: string,
+  customerMessage?: string,
+): string {
+  const message = generateWhatsappMessage(product, currentUrl, customerMessage);
+  return `https://wa.me/${phoneNumber.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
+}
+
 
 export function shortlistMessage(
   items: CartProduct[],
