@@ -2,15 +2,12 @@ import SiteLayout from "../components/SiteLayout";
 import { blogPosts, trustItems } from "../data";
 import type { AppState } from "../types";
 import Image from "next/image";
-import AppointmentForm from "../components/AppointmentForm";
-import WhatsAppButton from "../components/WhatsAppButton";
 
 export type SimplePageType =
   | "account"
   | "tracking"
   | "store"
   | "appointment"
-  | "gold-rate"
   | "about"
   | "contact"
   | "faq"
@@ -29,7 +26,6 @@ const copy: Record<SimplePageType, [string, string]> = {
   tracking: ["Order Tracking", "Reserved a piece? Call or WhatsApp the showroom with your reservation reference and we will confirm its status."],
   store: ["Store Locator", "PS Jewellers, Jhunjhunu, Rajasthan. Visit the showroom for bridal consultation, gold jewellery and diamond collections."],
   appointment: ["Book Appointment", "Reserve a private jewellery consultation for bridal sets, diamond rings, or gold investment pieces."],
-  "gold-rate": ["Today’s Gold Rate", "Rates are updated daily. Contact PS Jewellers on WhatsApp for the live 22K, 24K and silver rate, making charges and availability."],
   about: ["About PS Jewellers", "PS Jewellers serves Jhunjhunu with BIS hallmarked gold, certified diamonds and handcrafted 925 silver. Every piece is photographed in our own studio and listed with its weight and hallmarking."],
   contact: ["Contact", "Speak with PS Jewellers for product enquiries, appointments and showroom visits in Jhunjhunu."],
   faq: ["FAQ", "Common questions about hallmarking, pricing, reservations, exchange and certification."],
@@ -70,9 +66,10 @@ export default function SimplePage({ appState, type }: SimplePageProps) {
           <div className="rounded-xs border border-line bg-cream p-10 text-center">
             <h2 className="font-serif text-2xl text-ink">{title}</h2>
             <p className="mx-auto mt-3 max-w-xl text-ink-soft">{text}</p>
-            {type === "gold-rate" ? <WhatsAppButton label="Ask for live rate on WhatsApp" className="mt-6" /> : type === "appointment" ? <a href="#appointment-form" className="mt-6 inline-block rounded-lg bg-gold-500 px-6 py-3 text-sm font-semibold text-white hover:bg-gold-600">Choose a consultation</a> : <a href="/shop" className="mt-6 inline-block rounded-lg bg-gold-500 px-6 py-3 text-sm font-semibold text-white hover:bg-gold-600">Explore the catalogue</a>}
+            <a href="/shop" className="mt-6 inline-block rounded-xs bg-gold-500 px-6 py-3 text-sm font-semibold text-white hover:bg-gold-600">
+              Continue Shopping
+            </a>
           </div>
-          {type === "appointment" ? <div className="mt-8"><AppointmentForm /></div> : null}
           <div className="mt-10 grid grid-cols-2 gap-6 sm:grid-cols-4">
             {trustItems.map((item) => (
               <div key={item} className="text-center">

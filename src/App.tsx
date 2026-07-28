@@ -6,6 +6,8 @@ import HomePage from "./storefront-pages/HomePage";
 import ShopPage from "./storefront-pages/ShopPage";
 import ProductPage from "./storefront-pages/ProductPage";
 import SimplePage from "./storefront-pages/SimplePage";
+import CartPage from "./storefront-pages/CartPage";
+import CheckoutPage from "./storefront-pages/CheckoutPage";
 import NotFoundPage from "./storefront-pages/NotFoundPage";
 import { products } from "./data";
 import { createSupabaseBrowserClient } from "./lib/supabase/browser";
@@ -212,10 +214,6 @@ export default function App({
     return <HomePage appState={appState} settings={homepageSettings} products={catalogueProducts} />;
   if (path === "/shop" || path === "/portfolio")
     return <ShopPage appState={appState} customProducts={catalogueProducts} />;
-  if (path === "/new-arrivals")
-    return <ShopPage appState={appState} title="New Arrivals" customProducts={catalogueProducts} />;
-  if (path === "/offers")
-    return <ShopPage appState={appState} title="Showroom Offers" customProducts={catalogueProducts} />;
   const filterFromCategoryPath = categoryFromPath(path);
   if (filterFromCategoryPath)
     return (
@@ -230,9 +228,8 @@ export default function App({
         emptyMessage="Your wishlist is empty."
       />
     );
-  if (path === "/gold-rate") return <SimplePage appState={appState} type="gold-rate" />;
-  if (path === "/cart" || path === "/checkout")
-    return <ShopPage appState={appState} title="Explore the Catalogue" customProducts={catalogueProducts} />;
+  if (path === "/cart") return <CartPage appState={appState} />;
+  if (path === "/checkout") return <CheckoutPage appState={appState} />;
   if (path === "/account")
     return <SimplePage appState={appState} type="account" />;
   if (path === "/order-tracking")
