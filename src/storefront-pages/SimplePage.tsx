@@ -22,14 +22,14 @@ interface SimplePageProps {
 }
 
 const copy: Record<SimplePageType, [string, string]> = {
-  account: ["My Account", "Sign-in is coming soon. For now your wishlist, bag and recently viewed pieces are saved on this device."],
+  account: ["My Account", "Sign-in is coming soon. For now your recently viewed pieces are saved on this device."],
   tracking: ["Order Tracking", "Reserved a piece? Call or WhatsApp the showroom with your reservation reference and we will confirm its status."],
   store: ["Store Locator", "PS Jewellers, Jhunjhunu, Rajasthan. Visit the showroom for bridal consultation, gold jewellery and diamond collections."],
   appointment: ["Book Appointment", "Reserve a private jewellery consultation for bridal sets, diamond rings, or gold investment pieces."],
   about: ["About PS Jewellers", "PS Jewellers serves Jhunjhunu with BIS hallmarked gold, certified diamonds and handcrafted 925 silver. Every piece is photographed in our own studio and listed with its weight and hallmarking."],
   contact: ["Contact", "Speak with PS Jewellers for product enquiries, appointments and showroom visits in Jhunjhunu."],
   faq: ["FAQ", "Common questions about hallmarking, pricing, reservations, exchange and certification."],
-  privacy: ["Privacy Policy", "How PS Jewellers handles enquiry details, appointment requests and the wishlist stored on your device."],
+  privacy: ["Privacy Policy", "How PS Jewellers handles enquiry details and appointment requests."],
   terms: ["Terms & Conditions", "Terms covering product information, pricing, reservations and showroom consultations."],
   returns: ["Return Policy", "Exchange and buy-back terms for hallmarked gold, certified diamonds and silver jewellery."],
   blog: ["Blog", "Buying guides, styling notes and care advice for gold, diamond and silver jewellery."],

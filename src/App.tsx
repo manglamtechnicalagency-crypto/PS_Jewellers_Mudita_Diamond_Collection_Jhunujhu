@@ -1,20 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import HomePage from "./storefront-pages/HomePage";
 import ShopPage from "./storefront-pages/ShopPage";
 import ProductPage from "./storefront-pages/ProductPage";
 import SimplePage from "./storefront-pages/SimplePage";
-import CartPage from "./storefront-pages/CartPage";
-import CheckoutPage from "./storefront-pages/CheckoutPage";
 import NotFoundPage from "./storefront-pages/NotFoundPage";
 import { products } from "./data";
 import { createSupabaseBrowserClient } from "./lib/supabase/browser";
 import type {
   AppState,
-  CartLine,
-  CartProduct,
   HomepageSettings,
   Product,
 } from "./types";
@@ -52,12 +48,6 @@ export default function App({
 }: {
   initialProducts?: Product[];
 }) {
-  // Persisted state starts empty so server and first client render agree.
-  // Reading localStorage in the initializer would make the server emit an empty
-  // cart badge while the client emits the real count — a hydration mismatch on
-  // every visit with a non-empty cart.
-  const [wishlist, setWishlist] = useState<string[]>([]);
-  const [cart, setCart] = useState<CartLine[]>([]);
   const [recentlyViewed, setRecentlyViewed] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [hydrated, setHydrated] = useState(false);
@@ -70,8 +60,6 @@ export default function App({
   const path = normalizePath(usePathname() || "/");
 
   useEffect(() => {
-    setWishlist(readStored("ps-wishlist", []));
-    setCart(readStored("ps-cart", []));
     setRecentlyViewed(readStored("ps-recent", []));
     setSearchTerm(getInitialSearch());
     setHydrated(true);
@@ -139,70 +127,13 @@ export default function App({
   // Guarded on `hydrated` so the first pass cannot overwrite stored values with
   // the empty initial state.
   useEffect(() => {
-    if (hydrated) storeValue("ps-wishlist", wishlist);
-  }, [wishlist, hydrated]);
-  useEffect(() => {
-    if (hydrated) storeValue("ps-cart", cart);
-  }, [cart, hydrated]);
-  useEffect(() => {
     if (hydrated) storeValue("ps-recent", recentlyViewed);
   }, [recentlyViewed, hydrated]);
 
-  const wishlistProducts = useMemo<Product[]>(
-    () => catalogueProducts.filter((product) => wishlist.includes(product.id)),
-    [catalogueProducts, wishlist],
-  );
-
-  const cartProducts = useMemo<CartProduct[]>(
-    () =>
-      cart
-        .map((item) => {
-          const product = catalogueProducts.find(
-            (candidate) => candidate.id === item.id,
-          );
-          return product ? { ...product, quantity: item.quantity } : null;
-        })
-        .filter((item): item is CartProduct => item !== null),
-    [cart, catalogueProducts],
-  );
-
   const appState: AppState = {
-    wishlist,
-    cart,
-    cartProducts,
-    wishlistProducts,
     recentlyViewed,
     searchTerm,
     setSearchTerm,
-    addToCart(product) {
-      setCart((items) => {
-        const existing = items.find((item) => item.id === product.id);
-        if (existing) {
-          return items.map((item) =>
-            item.id === product.id
-              ? { ...item, quantity: item.quantity + 1 }
-              : item,
-          );
-        }
-        return [...items, { id: product.id, quantity: 1 }];
-      });
-    },
-    updateCart(id, quantity) {
-      setCart((items) =>
-        quantity <= 0
-          ? items.filter((item) => item.id !== id)
-          : items.map((item) =>
-              item.id === id ? { ...item, quantity } : item,
-            ),
-      );
-    },
-    toggleWishlist(product) {
-      setWishlist((items) =>
-        items.includes(product.id)
-          ? items.filter((id) => id !== product.id)
-          : [...items, product.id],
-      );
-    },
     addRecentlyViewed(product) {
       setRecentlyViewed((items) =>
         [product.id, ...items.filter((id) => id !== product.id)].slice(0, 6),
@@ -219,17 +150,6 @@ export default function App({
     return (
       <ShopPage appState={appState} initialFilter={filterFromCategoryPath} customProducts={catalogueProducts} />
     );
-  if (path === "/wishlist")
-    return (
-      <ShopPage
-        appState={appState}
-        title="Wishlist"
-        customProducts={wishlistProducts}
-        emptyMessage="Your wishlist is empty."
-      />
-    );
-  if (path === "/cart") return <CartPage appState={appState} />;
-  if (path === "/checkout") return <CheckoutPage appState={appState} />;
   if (path === "/account")
     return <SimplePage appState={appState} type="account" />;
   if (path === "/order-tracking")

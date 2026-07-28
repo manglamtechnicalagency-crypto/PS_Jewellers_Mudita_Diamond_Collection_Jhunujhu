@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import SiteLayout from "../components/SiteLayout";
 import ProductCard from "../components/ProductCard";
+import WhatsAppButton from "../components/WhatsAppButton";
 import { categoryToPath, formatPrice, products, trustItems } from "../data";
 import type { AppState, Product } from "../types";
 import Image from "next/image";
@@ -197,43 +198,7 @@ export default function ProductPage({ product, appState }: ProductPageProps) {
             </div>
 
             <div className="mt-8 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
-              <button
-                type="button"
-                id="enquire"
-                onClick={() => {
-                  appState?.addToCart(product);
-                  window.location.assign("/checkout");
-                }}
-                className="col-span-2 inline-flex min-h-12 items-center justify-center rounded-xs bg-gold-500 px-8 text-sm font-semibold text-white transition-colors hover:bg-gold-600 sm:col-span-1"
-              >
-                Send Enquiry
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  appState?.addToCart(product);
-                  window.location.assign("/checkout");
-                }}
-                className="col-span-2 inline-flex min-h-12 items-center justify-center rounded-xs border border-gold-500 px-8 text-sm font-semibold text-gold-600 transition-colors hover:bg-gold-500 hover:text-white sm:col-span-1"
-              >
-                Review Shortlist
-              </button>
-              <button
-                type="button"
-                onClick={() => appState?.addToCart(product)}
-                className="inline-flex min-h-12 items-center justify-center rounded-xs border border-line px-6 text-sm font-medium text-ink-soft transition-colors hover:border-gold-500 hover:text-gold-600"
-              >
-                Add to Shortlist
-              </button>
-              <button
-                type="button"
-                onClick={() => appState?.toggleWishlist(product)}
-                className="inline-flex min-h-12 items-center justify-center rounded-xs border border-line px-6 text-sm font-medium text-ink-soft transition-colors hover:border-gold-500 hover:text-gold-600"
-              >
-                {appState?.wishlist?.includes(product.id)
-                  ? "Wishlisted ♥"
-                  : "Add to Wishlist"}
-              </button>
+              <WhatsAppButton product={product} label="💬 Enquire on WhatsApp" className="col-span-2 min-h-12 px-8 sm:col-span-1" />
             </div>
 
             <div className="mt-10 grid grid-cols-4 gap-3 border-t border-line pt-8 sm:gap-4">

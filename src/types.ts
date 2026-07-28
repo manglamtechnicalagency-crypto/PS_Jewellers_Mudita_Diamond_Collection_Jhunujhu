@@ -64,26 +64,10 @@ export interface BlogPost {
   image: string;
 }
 
-export interface CartLine {
-  id: string;
-  quantity: number;
-}
-
-export interface CartProduct extends Product {
-  quantity: number;
-}
-
 export interface AppState {
-  wishlist: string[];
-  cart: CartLine[];
-  cartProducts: CartProduct[];
-  wishlistProducts: Product[];
   recentlyViewed: string[];
   searchTerm: string;
   setSearchTerm: (term: string) => void;
-  addToCart: (product: Product) => void;
-  updateCart: (id: string, quantity: number) => void;
-  toggleWishlist: (product: Product) => void;
   addRecentlyViewed: (product: Product) => void;
 }
 

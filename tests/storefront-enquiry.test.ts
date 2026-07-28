@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { generateWhatsappMessage, whatsappHref } from "../src/lib/storefront-enquiry.ts";
+import { generateWhatsAppMessage, whatsappHref } from "../src/lib/storefront-enquiry.ts";
 
 const product = {
   id: "PSJ-TEST-001",
@@ -35,16 +35,16 @@ const product = {
 
 describe("generateWhatsappMessage", () => {
   it("includes product context and the requested pricing checklist", () => {
-    const message = generateWhatsappMessage(product, "https://psjewellers.com/product/heritage-ring");
+    const message = generateWhatsAppMessage(product, "https://psjewellers.com/product/heritage-ring");
 
-    assert.match(message, /Product:\nHeritage Halo Ring/);
+    assert.match(message, /Product Name:\nHeritage Halo Ring/);
     assert.match(message, /Category:\nGold Rings/);
+    assert.match(message, /Metal:\nNone/);
     assert.match(message, /Purity:\n22K Gold/);
     assert.match(message, /Weight:\n4\.250 g/);
-    assert.match(message, /SKU:\nPSJ-22K-RG-001/);
     assert.match(message, /Product Link:\nhttps:\/\/psjewellers\.com\/product\/heritage-ring/);
-    assert.match(message, /Today's Gold Price/);
-    assert.match(message, /More Photos/);
+    assert.match(message, /Today's Price/);
+    assert.match(message, /More Images/);
   });
 });
 

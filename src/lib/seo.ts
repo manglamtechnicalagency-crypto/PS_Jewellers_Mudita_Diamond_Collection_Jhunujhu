@@ -77,9 +77,6 @@ export const STATIC_ROUTE_META: Record<string, StaticRouteMeta> = {
   "/new-arrivals": { title: "New Arrivals", description: "The newest jewellery designs added to the PS Jewellers collection." },
   "/best-sellers": { title: "Best Sellers", description: "The most loved gold, diamond and bridal pieces at PS Jewellers." },
   "/offers": { title: "Offers", description: "Current offers and savings across the PS Jewellers jewellery collection." },
-  "/wishlist": { title: "Wishlist", description: "Jewellery you have saved to revisit before your showroom appointment." },
-  "/cart": { title: "Your Bag", description: "Review the jewellery in your PS Jewellers bag." },
-  "/checkout": { title: "Checkout", description: "Complete your PS Jewellers enquiry." },
   "/account": { title: "Account", description: "Your PS Jewellers account." },
   "/order-tracking": { title: "Order Tracking", description: "Track the status of your PS Jewellers order." },
   "/store-locator": {
@@ -176,7 +173,7 @@ export function metadataForRoute(path: string): Metadata {
   }
 
   // Transactional and personal routes carry no SEO value and should not be indexed.
-  const noIndexRoutes = ["/cart", "/checkout", "/account", "/wishlist", "/order-tracking"];
+  const noIndexRoutes = ["/account", "/order-tracking"];
 
   return {
     ...buildMetadata({ title: staticMeta.title, description: staticMeta.description, path }),
