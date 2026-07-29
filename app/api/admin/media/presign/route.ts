@@ -4,6 +4,7 @@ import { z } from "zod";
 import { hasValidSameOrigin, requireAdmin } from "@/src/lib/admin-auth";
 import { createUploadUrl, publicObjectUrl } from "@/src/lib/r2-server";
 import { consumeUploadRateLimit, getTrustedClientKey } from "@/src/lib/upload-rate-limit";
+import { validateProductMediaSelection } from "@/src/lib/product-media-policy";
 
 export const runtime = "nodejs";
 
@@ -35,6 +36,17 @@ export async function POST(request: Request) {
   try { body = await request.json(); } catch { return errorResponse(400, "invalid_json", "Request body must be valid JSON"); }
   const parsed = requestSchema.safeParse(body);
   if (!parsed.success) return errorResponse(422, "validation_error", "Media upload details are invalid");
+
+  if (parsed.data.productId) {
+    const existing = await auth.client.from("product_media").select("media:media_id(mime_type)").eq("product_id", parsed.data.productId);
+    if (existing.error) return errorResponse(500, "database_error", "Product media could not be checked");
+    const existingTypes = (existing.data ?? []).map((link) => {
+      const media = Array.isArray(link.media) ? link.media[0] : link.media;
+      return { type: String(media?.mime_type ?? "") };
+    });
+    const policy = validateProductMediaSelection([{ type: parsed.data.contentType, size: parsed.data.fileSize }], existingTypes);
+    if (!policy.valid) return errorResponse(422, "media_limit", policy.message ?? "Product media is invalid");
+  }
 
   let objectKey: string;
   if (parsed.data.mediaId) {

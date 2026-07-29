@@ -21,7 +21,7 @@ export default async function EnquiriesPage() {
     auth.client
       .from("enquiries")
       .select(
-        "id, enquiry_number, name, email, phone, message, product_id, status, source, preferred_contact, assigned_to, internal_notes, next_follow_up_at, created_at, products(name, sku, slug)",
+        "id, enquiry_number, name, email, phone, message, product_id, status, source, preferred_contact, assigned_to, internal_notes, next_follow_up_at, created_at, products(name, slug)",
       )
       .order("created_at", { ascending: false })
       .limit(25),

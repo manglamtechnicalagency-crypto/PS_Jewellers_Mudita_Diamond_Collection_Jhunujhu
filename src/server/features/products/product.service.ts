@@ -21,7 +21,11 @@ export class ProductService {
     const result = await this.repository.create({ ...input, actorId });
     if (result.error) {
       const duplicate = result.error.code === "23505";
-      throw new ApplicationError(duplicate ? "SKU or slug already exists" : "Product could not be created", duplicate ? "duplicate_product" : "database_error", duplicate ? 409 : 500);
+      const duplicateText = `${result.error.message ?? ""} ${result.error.details ?? ""}`.toLowerCase();
+      const message = duplicateText.includes("slug")
+        ? "A product with this generated URL already exists. Please try again."
+        : "A product with these details already exists.";
+      throw new ApplicationError(duplicate ? message : "Product could not be created", duplicate ? "duplicate_product" : "database_error", duplicate ? 409 : 500);
     }
     return result.data;
   }

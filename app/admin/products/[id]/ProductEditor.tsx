@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isProductVideo, validateProductMediaSelection } from "@/src/lib/product-media-policy";
 
 type Product = Record<string, unknown> & {
   id: string;
@@ -16,12 +17,12 @@ type MediaLink = Record<string, unknown> & {
   display_order: number;
 };
 type Review = Record<string, unknown> & { id: string; status: string };
+const ACCEPTED_MEDIA_TYPES = "image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime";
 const textFields = [
   ["name", "Product name"],
-  ["sku", "SKU"],
-  ["slug", "Slug"],
   ["short_description", "Short description"],
   ["long_description", "Long description"],
+  ["care_instructions", "Care instructions"],
   ["metal_type", "Metal type"],
   ["metal_purity", "Metal purity"],
   ["stone_type", "Stone type"],
@@ -30,8 +31,6 @@ const textFields = [
   ["certification", "Certification"],
   ["certificate_number", "Certificate number"],
   ["hallmark_code", "Hallmark code"],
-  ["seo_title", "SEO title"],
-  ["seo_description", "SEO description"],
 ] as const;
 const numberFields = [
   ["metal_weight_grams", "Metal weight (g)"],
@@ -47,6 +46,33 @@ const numberFields = [
   ["stock_quantity", "Stock quantity"],
   ["display_order", "Display order"],
 ] as const;
+const apiFieldNames: Record<string, string> = {
+  short_description: "shortDescription",
+  long_description: "longDescription",
+  care_instructions: "careInstructions",
+  metal_type: "metalType",
+  metal_purity: "metalPurity",
+  stone_type: "stoneType",
+  stone_clarity: "stoneClarity",
+  stone_colour: "stoneColour",
+  certification: "certification",
+  certificate_number: "certificateNumber",
+  hallmark_code: "hallmarkCode",
+  seo_title: "seoTitle",
+  seo_description: "seoDescription",
+  metal_weight_grams: "metalWeightGrams",
+  gross_weight_grams: "grossWeightGrams",
+  net_weight_grams: "netWeightGrams",
+  stone_carat: "stoneCarat",
+  stone_count: "stoneCount",
+  base_price: "basePrice",
+  making_charges: "makingCharges",
+  wastage_percent: "wastagePercent",
+  gst_percent: "gstPercent",
+  discount_value: "discountValue",
+  stock_quantity: "stockQuantity",
+  display_order: "displayOrder",
+};
 
 function csv(value: unknown) {
   return Array.isArray(value)
@@ -77,6 +103,10 @@ export default function ProductEditor({
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [newMediaFile, setNewMediaFile] = useState<File | null>(null);
+  const [newMediaRole, setNewMediaRole] = useState("gallery");
+  const [newMediaTitle, setNewMediaTitle] = useState("");
+  const [uploadingMedia, setUploadingMedia] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewAcknowledged, setPreviewAcknowledged] = useState(false);
   function setValue(key: string, value: unknown) {
@@ -92,10 +122,24 @@ export default function ProductEditor({
       );
       return;
     }
+    const shortDescription = String(product.short_description ?? "").trim();
+    const longDescription = String(product.long_description ?? "").trim();
+    if (product.status === "published" && !shortDescription && !longDescription) {
+      setMessage("Add a short description or long description before publishing.");
+      return;
+    }
+    if (product.status === "published" && !mediaLinks.some((item) => item.role === "primary" && String((item.media as Record<string, unknown> | null)?.mime_type ?? "").startsWith("image/"))) {
+      setMessage("Add one approved primary image before publishing.");
+      return;
+    }
+    if (product.price_mode === "fixed" && (!product.base_price || Number(product.base_price) <= 0)) {
+      setMessage("Enter a regular price, or choose Price on request when the price is not available.");
+      return;
+    }
     setSaving(true);
     setMessage("");
     const body: Record<string, unknown> = {};
-    for (const [key] of textFields) body[key] = String(product[key] ?? "");
+    for (const [key] of textFields) body[apiFieldNames[key] ?? key] = String(product[key] ?? "");
     const nullable = new Set([
       "metal_weight_grams",
       "gross_weight_grams",
@@ -105,7 +149,7 @@ export default function ProductEditor({
       "base_price",
     ]);
     for (const [key] of numberFields)
-      body[key] =
+      body[apiFieldNames[key] ?? key] =
         product[key] === null || product[key] === undefined
           ? nullable.has(key)
             ? null
@@ -170,6 +214,9 @@ export default function ProductEditor({
     );
     setDragIndex(null);
   }
+  function setExistingMediaRole(index: number, role: string) {
+    setMediaLinks((current) => current.map((media, mediaIndex) => mediaIndex === index ? { ...media, role } : role === "primary" && media.role === "primary" ? { ...media, role: "gallery" } : media));
+  }
   async function saveMediaOrder() {
     const response = await fetch(`/api/admin/products/${product.id}/media`, {
       method: "PATCH",
@@ -187,6 +234,73 @@ export default function ProductEditor({
         ? "Media order saved live."
         : "Media order could not be saved",
     );
+  }
+
+  async function uploadProductMedia(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!newMediaFile) return;
+    setUploadingMedia(true);
+    setMessage("");
+    try {
+      const existingMedia = mediaLinks.map((item) => ({ type: String((item.media as Record<string, unknown> | null)?.mime_type ?? "image/jpeg") }));
+      if (newMediaRole === "primary" && mediaLinks.some((item) => item.role === "primary")) { setMessage("Set the existing primary media to another priority and save media order before adding a new primary."); return; }
+      const duration = isProductVideo(newMediaFile.type) ? await getVideoDuration(newMediaFile) : undefined;
+      const policy = validateProductMediaSelection([{ name: newMediaFile.name, type: newMediaFile.type, size: newMediaFile.size, duration }], existingMedia);
+      if (!policy.valid) { setMessage(policy.message ?? "Product media is invalid."); return; }
+      const presignResponse = await fetch("/api/admin/media/presign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentType: newMediaFile.type, fileSize: newMediaFile.size, productId: product.id }),
+      });
+      const presign = (await presignResponse.json()) as { uploadUrl?: string; objectKey?: string; error?: { message?: string } };
+      if (!presignResponse.ok || !presign.uploadUrl || !presign.objectKey) throw new Error(presign.error?.message ?? "Image upload could not be prepared");
+
+      const uploadResponse = await fetch(presign.uploadUrl, { method: "PUT", headers: { "Content-Type": newMediaFile.type }, body: newMediaFile });
+      if (!uploadResponse.ok) throw new Error("Image upload failed");
+
+      const registerResponse = await fetch("/api/admin/media", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storageKey: presign.objectKey,
+          originalFilename: newMediaFile.name,
+          mimeType: newMediaFile.type,
+          fileSizeBytes: newMediaFile.size,
+          title: newMediaTitle || product.name,
+          altText: newMediaTitle || product.name,
+          productId: product.id,
+          role: newMediaRole,
+          displayOrder: mediaLinks.length,
+        }),
+      });
+      const registered = (await registerResponse.json()) as { data?: Record<string, unknown>; error?: { message?: string } };
+      if (!registerResponse.ok || !registered.data) throw new Error(registered.error?.message ?? "Image metadata could not be saved");
+
+      setMediaLinks((current) => [...current, {
+        media_id: String(registered.data?.id),
+        role: String(registered.data?.role ?? newMediaRole),
+        display_order: Number(registered.data?.display_order ?? current.length),
+        media: registered.data,
+      }]);
+      setNewMediaFile(null);
+      setNewMediaTitle("");
+      setMessage("Image added to this product.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Product image could not be uploaded");
+    } finally {
+      setUploadingMedia(false);
+    }
+  }
+
+  function getVideoDuration(file: File): Promise<number | undefined> {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(video.duration); };
+      video.onerror = () => { URL.revokeObjectURL(url); resolve(undefined); };
+      video.src = url;
+    });
   }
   async function moderateReview(review: Review, status: string) {
     const response = await fetch("/api/admin/reviews", {
@@ -273,8 +387,19 @@ export default function ProductEditor({
         </section>
         <section className="grid gap-4 rounded-xs border border-line bg-white p-6 sm:grid-cols-2">
           <h2 className="font-serif text-2xl sm:col-span-2">
-            Pricing and inventory
+            Pricing and offers
           </h2>
+          <label className="flex items-center gap-3 text-sm font-medium sm:col-span-2">
+            <input
+              type="checkbox"
+              checked={Boolean(product.discount_type)}
+              onChange={(event) => {
+                setValue("discount_type", event.target.checked ? "percentage" : null);
+                if (!event.target.checked) setValue("discount_value", 0);
+              }}
+            />
+            Offer enabled
+          </label>
           <label className="text-sm font-medium">
             Pricing mode
             <select
@@ -331,43 +456,6 @@ export default function ProductEditor({
                     ? `₹${Number(product.display_price).toLocaleString("en-IN")}`
                     : "Save to calculate"}
           </div>
-        </section>
-        <section className="grid gap-4 rounded-xs border border-line bg-white p-6 sm:grid-cols-2">
-          <h2 className="font-serif text-2xl sm:col-span-2">
-            Search, merchandising, and display
-          </h2>
-          {[
-            ["size_options", "Size options"],
-            ["tags", "Tags"],
-            ["seo_keywords", "SEO keywords"],
-          ].map(([key, label]) => (
-            <label key={key} className="text-sm font-medium">
-              {label}
-              <input
-                className="mt-1 w-full border border-line p-3"
-                value={csv(product[key])}
-                onChange={(event) => setValue(key, event.target.value)}
-                placeholder="Comma separated"
-              />
-            </label>
-          ))}
-          {[
-            ["is_featured", "Featured"],
-            ["is_new_arrival", "New arrival"],
-            ["is_best_seller", "Best seller"],
-          ].map(([key, label]) => (
-            <label
-              key={key}
-              className="flex items-center gap-3 text-sm font-medium"
-            >
-              <input
-                type="checkbox"
-                checked={Boolean(product[key])}
-                onChange={(event) => setValue(key, event.target.checked)}
-              />
-              {label}
-            </label>
-          ))}
         </section>
         {previewOpen ? (
           <section className="rounded-xs border border-gold-300 bg-cream p-5 sm:col-span-2">
@@ -429,8 +517,34 @@ export default function ProductEditor({
             Recommended: one primary image, multiple gallery images, and
             optional videos.
           </p>
+          <form className="mt-4 space-y-3 border-y border-line py-4" onSubmit={uploadProductMedia}>
+            <h3 className="text-sm font-semibold">Add media to this product</h3>
+            <input
+              className="block w-full text-xs"
+              type="file"
+              accept={ACCEPTED_MEDIA_TYPES}
+              onChange={(event) => setNewMediaFile(event.target.files?.[0] ?? null)}
+              required
+            />
+            <select className="w-full border border-line p-2 text-sm" value={newMediaRole} onChange={(event) => setNewMediaRole(event.target.value)}>
+              <option value="primary">Primary image</option>
+              <option value="gallery">Gallery image</option>
+              <option value="hover">Hover image</option>
+              <option value="spin">Spin media</option>
+              <option value="certificate">Certificate</option>
+            </select>
+            <input className="w-full border border-line p-2 text-sm" value={newMediaTitle} onChange={(event) => setNewMediaTitle(event.target.value)} placeholder="Image title (optional)" />
+            <p className="text-xs text-muted">Maximum 5 total media items. Images must be 3 MB or smaller; one video may be 10–12 seconds and up to 30 MB.</p>
+            <button type="submit" disabled={!newMediaFile || uploadingMedia} className="w-full bg-ink px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+              {uploadingMedia ? "Uploading media…" : "Add media"}
+            </button>
+          </form>
           <div className="mt-4 space-y-3">
-            {mediaLinks.map((item, index) => (
+            {mediaLinks.map((item, index) => {
+              const media = item.media as Record<string, unknown> | null;
+              const publicUrl = typeof media?.public_url === "string" ? media.public_url : null;
+              const mimeType = String(media?.mime_type ?? "");
+              return (
               <div
                 key={`${item.media_id}-${index}`}
                 className="flex items-center justify-between gap-2 rounded-xs bg-cream p-3 text-sm"
@@ -439,15 +553,28 @@ export default function ProductEditor({
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={() => dropMedia(index)}
               >
-                <span>
-                  <strong>{item.role}</strong>
-                  <p className="break-all text-xs text-muted">
-                    {String(
-                      (item.media as Record<string, unknown> | null)
-                        ?.original_filename ?? "R2 media",
-                    )}
-                  </p>
-                </span>
+                <div className="flex min-w-0 items-center gap-3">
+                  {publicUrl && mimeType.startsWith("image/") ? (
+                    <img
+                      src={publicUrl}
+                      alt={String(media?.alt_text ?? media?.original_filename ?? "Product media")}
+                      className="h-16 w-16 shrink-0 rounded-xs border border-line bg-white object-cover"
+                      loading="lazy"
+                    />
+                  ) : null}
+                  <span className="min-w-0">
+                    <strong className="block break-all">
+                      {String(media?.title || media?.original_filename || "R2 media")}
+                    </strong>
+                    <select className="mt-1 border border-line bg-white p-1 text-xs font-semibold uppercase tracking-wide text-gold-700" value={item.role} onChange={(event) => setExistingMediaRole(index, event.target.value)} aria-label={`Priority for ${String(media?.title || media?.original_filename || "media")}`}>
+                      <option value="primary">Primary</option>
+                      <option value="gallery">Gallery</option>
+                      <option value="hover">Hover</option>
+                      <option value="spin">Spin / video</option>
+                      <option value="certificate">Certificate</option>
+                    </select>
+                  </span>
+                </div>
                 <span className="flex gap-1">
                   <button
                     type="button"
@@ -467,7 +594,8 @@ export default function ProductEditor({
                   </button>
                 </span>
               </div>
-            ))}
+              );
+            })}
             {!mediaLinks.length ? (
               <p className="text-sm text-muted">No linked media yet.</p>
             ) : null}

@@ -5,7 +5,7 @@ import { getPublishedProductSlugs } from "@/src/lib/catalogue-server";
 export const dynamic = "force-dynamic";
 
 // Personal and transactional routes carry no SEO value.
-const EXCLUDED = new Set(["/cart", "/checkout", "/account", "/wishlist", "/order-tracking"]);
+const EXCLUDED = new Set(["/cart", "/checkout", "/wishlist", "/order-tracking"]);
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const lastModified = new Date();

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-type Product = { id: string; name: string; sku: string };
+type Product = { id: string; name: string };
 export default function BulkOperations({ products }: { products: Product[] }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [status, setStatus] = useState("");
@@ -45,7 +45,7 @@ export default function BulkOperations({ products }: { products: Product[] }) {
               checked={selected.includes(product.id)}
               onChange={() => toggle(product.id)}
             />
-            {product.name} · {product.sku}
+            {product.name}
           </label>
         ))}
       </div>

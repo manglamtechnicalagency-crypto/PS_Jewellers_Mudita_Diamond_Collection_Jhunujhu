@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { deleteObject, publicObjectUrl } from "@/src/lib/r2-server";
 import { hasValidSameOrigin, requireAdmin } from "@/src/lib/admin-auth";
+import { validateProductMediaSelection } from "@/src/lib/product-media-policy";
 
 const mediaSchema = z
   .object({
@@ -131,6 +132,16 @@ export async function POST(request: Request) {
     return errorResponse(422, "validation_error", "Media fields are invalid");
 
   const media = parsed.data;
+  if (media.productId) {
+    const existing = await auth.client.from("product_media").select("media:media_id(mime_type)").eq("product_id", media.productId);
+    if (existing.error) return errorResponse(500, "database_error", "Product media could not be checked");
+    const existingTypes = (existing.data ?? []).map((link) => {
+      const linked = Array.isArray(link.media) ? link.media[0] : link.media;
+      return { type: String(linked?.mime_type ?? "") };
+    });
+    const policy = validateProductMediaSelection([{ type: media.mimeType, size: media.fileSizeBytes }], existingTypes);
+    if (!policy.valid) return errorResponse(422, "media_limit", policy.message ?? "Product media is invalid");
+  }
   const { data, error } = await auth.client.rpc("register_media", {
     p_storage_key: media.storageKey,
     p_original_filename: media.originalFilename,
@@ -160,6 +171,16 @@ export async function POST(request: Request) {
         ? "That media object is already registered"
         : "Media could not be registered",
     );
+  }
+  if (media.productId) {
+    const { error: approvalError } = await auth.client
+      .from("media")
+      .update({ review_status: "approved" })
+      .eq("id", data.id)
+      .is("deleted_at", null);
+    if (approvalError) {
+      console.error("[admin-media] product_media_approval_failed", { errorName: approvalError.message });
+    }
   }
   return NextResponse.json(
     { data: { ...data, public_url: publicObjectUrl(data.storage_key) } },

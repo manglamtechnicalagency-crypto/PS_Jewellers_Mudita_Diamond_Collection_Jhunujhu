@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import SiteLayout from "../components/SiteLayout";
 import ProductCard from "../components/ProductCard";
 import Reveal from "../components/Reveal";
@@ -23,6 +23,11 @@ function SectionTitle({ kicker, title, copy, tone = "light" }: { kicker: string;
 }
 
 export default function HomePage({ appState, settings, products }: HomePageProps) {
+  const [loadHeroVideo, setLoadHeroVideo] = useState(false);
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setLoadHeroVideo(true), 1200);
+    return () => window.clearTimeout(timeoutId);
+  }, []);
   const collectionLinks: Record<string, string> = {
     "Heritage Antique": "/silver-jewellery",
     "Celeste Diamonds": "/diamond-jewellery",
@@ -39,7 +44,7 @@ export default function HomePage({ appState, settings, products }: HomePageProps
     <SiteLayout appState={appState}>
       <section className="relative flex min-h-[78svh] sm:min-h-[85vh] items-end overflow-hidden bg-ink">
         <video
-          src={assets.heroVideo}
+          src={loadHeroVideo ? assets.heroVideo : undefined}
           poster={assets.antiqueNecklace}
           autoPlay
           muted

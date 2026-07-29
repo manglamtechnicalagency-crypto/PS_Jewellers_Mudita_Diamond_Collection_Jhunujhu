@@ -48,7 +48,6 @@ export default function ShopPage({
         product.id,
         product.category,
         product.collection,
-        product.sku,
         product.purity,
         product.weight,
         product.stoneType,

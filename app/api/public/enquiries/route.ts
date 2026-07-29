@@ -97,7 +97,7 @@ export async function POST(request: Request) {
     ? await client
         .from("products")
         .select(
-      "id, name, sku, slug, metal_purity, display_price, price_on_request, stock_status, category_id",
+      "id, name, slug, metal_purity, display_price, price_on_request, stock_status, category_id",
         )
         .in("id", productIds)
         .eq("status", "published")
@@ -180,7 +180,7 @@ export async function POST(request: Request) {
     `Enquiry ID: ${inserted.enquiry_number}`,
     ...(products ?? []).map(
       (item, index) => [
-        `${index + 1}. ${item.name} (${item.sku})`,
+        `${index + 1}. ${item.name}`,
         `Purity: ${item.metal_purity || "Not specified"}`,
         `Displayed Price: ${item.price_on_request ? "On enquiry" : item.display_price ?? "On enquiry"}`,
         `Product URL: ${siteOrigin}/product/${encodeURIComponent(item.slug)}`,

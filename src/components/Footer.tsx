@@ -1,10 +1,12 @@
+import BrandLogo from "./BrandLogo";
+
 export default function Footer() {
   return (
     <footer className="border-t border-line bg-cream">
       <div className="mx-auto max-w-content px-4 py-12 sm:px-5 sm:py-16 lg:px-10">
         <div className="flex flex-col gap-6 border-b border-line pb-10 sm:flex-row sm:pb-12 sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-gold-600">PS Jewellers</p>
+            <BrandLogo className="h-20 w-20" />
             <h2 className="mt-2 font-serif text-3xl text-ink sm:text-4xl lg:text-5xl">Luxury you can trust.</h2>
           </div>
           <div className="grid w-full grid-cols-2 gap-3 sm:flex sm:w-auto sm:flex-wrap">

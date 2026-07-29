@@ -3,7 +3,6 @@ import { z } from "zod";
 import { hasValidSameOrigin, requireAdmin } from "@/src/lib/admin-auth";
 
 const columns = [
-  "sku",
   "slug",
   "name",
   "categorySlug",
@@ -81,9 +80,9 @@ function parseCsv(csv: string): { rows: Row[]; errors: string[] } {
     const row = Object.fromEntries(
       columns.map((column) => [column, values[headers.indexOf(column)] ?? ""]),
     ) as Row;
-    if (!row.sku || !row.slug || !row.name || !row.categorySlug)
+    if (!row.slug || !row.name || !row.categorySlug)
       errors.push(
-        `Row ${index + 2}: sku, slug, name, and categorySlug are required`,
+        `Row ${index + 2}: slug, name, and categorySlug are required`,
       );
     if (
       row.priceMode &&
@@ -165,19 +164,15 @@ export async function POST(request: Request) {
   const collectionSlugs = [
     ...new Set(parsedCsv.rows.map((row) => row.collectionSlug).filter(Boolean)),
   ];
-  const duplicateSkus = parsedCsv.rows
-    .map((row) => row.sku)
-    .filter((sku, index, all) => all.indexOf(sku) !== index);
   const duplicateSlugs = parsedCsv.rows
     .map((row) => row.slug)
     .filter((slug, index, all) => all.indexOf(slug) !== index);
-  if (duplicateSkus.length || duplicateSlugs.length)
+  if (duplicateSlugs.length)
     return errorResponse(
       422,
       "csv_validation_error",
-      "CSV contains duplicate SKU or slug values",
+      "CSV contains duplicate slug values",
       {
-        duplicateSkus: [...new Set(duplicateSkus)],
         duplicateSlugs: [...new Set(duplicateSlugs)],
       },
     );
@@ -214,7 +209,7 @@ export async function POST(request: Request) {
       missingCollections,
     );
   const rows = parsedCsv.rows.map((row) => ({
-    sku: row.sku,
+    sku: `LEGACY-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`.toUpperCase().slice(0, 80),
     slug: row.slug,
     name: row.name,
     category_id: categoryMap.get(row.categorySlug),
@@ -231,13 +226,13 @@ export async function POST(request: Request) {
   const { data, error } = await auth.client
     .from("products")
     .insert(rows)
-    .select("id, sku, slug, name, status");
+    .select("id, slug, name, status");
   if (error)
     return errorResponse(
       error.code === "23505" ? 409 : 500,
       error.code === "23505" ? "duplicate_product" : "database_error",
       error.code === "23505"
-        ? "CSV contains a duplicate SKU or slug"
+        ? "CSV contains a duplicate slug"
         : "Products could not be imported",
     );
   return NextResponse.json(

@@ -4,6 +4,7 @@ import LogoutButton from "../../_components/LogoutButton";
 import { requireAdmin } from "@/src/lib/admin-auth";
 import ProductEditor from "./ProductEditor";
 import ProductWorkflowTools from "./ProductWorkflowTools";
+import { publicObjectUrl } from "@/src/lib/r2-server";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,15 @@ export default async function ProductEditorPage({
       .limit(20),
   ]);
   if (product.error || !product.data) notFound();
+  const mediaWithUrls = (media.data ?? []).map((item) => {
+    const mediaItem = Array.isArray(item.media) ? item.media[0] : item.media;
+    return {
+      ...item,
+      media: mediaItem
+        ? { ...mediaItem, public_url: publicObjectUrl(String(mediaItem.storage_key)) }
+        : mediaItem,
+    };
+  });
   return (
     <main className="min-h-screen bg-cream px-5 py-8 text-ink lg:px-10">
       <div className="mx-auto max-w-7xl">
@@ -77,7 +87,7 @@ export default async function ProductEditorPage({
         </header>
         <ProductEditor
           initialProduct={product.data}
-          initialMedia={media.data ?? []}
+          initialMedia={mediaWithUrls}
           initialReviews={reviews.data ?? []}
           initialPricing={pricing.data ?? null}
         />

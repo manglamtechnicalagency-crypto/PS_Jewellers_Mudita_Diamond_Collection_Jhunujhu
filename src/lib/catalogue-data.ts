@@ -28,7 +28,7 @@ export function buildCatalogueProducts(rows: CatalogueRow[], links: MediaLink[])
       hallmark: text(row.hallmark_code), certification: text(row.certification), purity: text(row.metal_purity), weight: row.net_weight_grams ? `${row.net_weight_grams} g` : "", stoneType: text(row.stone_type), occasion: "Everyday",
       image: images[0] ?? "", video: media.find((item) => item.mimeType.startsWith("video/"))?.url, images, rating: number(row.rating_average), reviewsCount: number(row.rating_count),
       badge: row.is_best_seller ? "Best Seller" : row.is_new_arrival ? "New Arrival" : "", tags: Array.isArray(row.tags) ? row.tags.filter((tag): tag is string => typeof tag === "string") : [], priceOnRequest: Boolean(row.price_on_request),
-      highlights: [], description: text(row.long_description ?? row.short_description), specs: {}, care: [], reviews: [],
+      highlights: [], description: text(row.long_description ?? row.short_description), specs: {}, care: text(row.care_instructions).split(/\r?\n/).map((item) => item.trim()).filter(Boolean), reviews: [],
     };
   }).filter((product) => product.images.length > 0);
 }

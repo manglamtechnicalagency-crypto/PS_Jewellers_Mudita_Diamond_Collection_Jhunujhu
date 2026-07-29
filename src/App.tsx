@@ -95,8 +95,10 @@ export default function App({
         // Built-in defaults remain available when the CMS is unavailable.
       }
     };
-    void refreshCatalogue();
     void refreshHomepageSettings();
+    // The catalogue is already rendered on the server. Avoid a duplicate
+    // request during first paint; the interval and realtime channel keep it
+    // fresh after the page is interactive.
     const interval = window.setInterval(refreshCatalogue, 30_000);
     const supabase = createSupabaseBrowserClient();
     const channel = supabase
@@ -150,8 +152,6 @@ export default function App({
     return (
       <ShopPage appState={appState} initialFilter={filterFromCategoryPath} customProducts={catalogueProducts} />
     );
-  if (path === "/account")
-    return <SimplePage appState={appState} type="account" />;
   if (path === "/order-tracking")
     return <SimplePage appState={appState} type="tracking" />;
   if (path === "/store-locator")

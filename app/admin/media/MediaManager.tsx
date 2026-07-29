@@ -10,7 +10,7 @@ interface ProductLink {
   product_id: string;
   role: string;
   display_order: number;
-  products: { id: string; name: string; sku: string; status: string } | null;
+  products: { id: string; name: string; status: string } | null;
 }
 
 interface MediaItem {
@@ -32,7 +32,7 @@ interface MediaItem {
 interface ProductOption {
   id: string;
   name: string;
-  sku: string;
+  
 }
 interface LocalMediaItem {
   id: string;
@@ -72,6 +72,8 @@ export default function MediaManager() {
   const [productId, setProductId] = useState("");
   const [role, setRole] = useState("gallery");
   const [products, setProducts] = useState<ProductOption[]>([]);
+  const [productSearch, setProductSearch] = useState("");
+  const [mediaSearch, setMediaSearch] = useState("");
   const [busy, setBusy] = useState(false);
   const [replacingId, setReplacingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -290,11 +292,18 @@ export default function MediaManager() {
     else await syncD1();
   }
 
-  const pageCount = Math.max(1, Math.ceil(items.length / MEDIA_PAGE_SIZE));
-  const visibleItems = items.slice(
-    (page - 1) * MEDIA_PAGE_SIZE,
-    page * MEDIA_PAGE_SIZE,
-  );
+  const normalizedMediaSearch = mediaSearch.trim().toLowerCase();
+  const filteredItems = items.filter((item) => !normalizedMediaSearch || [
+    item.title,
+    item.original_filename,
+    item.alt_text,
+    item.section_key ?? "",
+    ...item.product_links.flatMap((link) => [link.products?.name ?? ""]),
+  ].some((value) => value.toLowerCase().includes(normalizedMediaSearch)));
+  const filteredPageCount = Math.max(1, Math.ceil(filteredItems.length / MEDIA_PAGE_SIZE));
+  const filteredVisibleItems = filteredItems.slice((page - 1) * MEDIA_PAGE_SIZE, page * MEDIA_PAGE_SIZE);
+  const normalizedProductSearch = productSearch.trim().toLowerCase();
+  const filteredProducts = products.filter((product) => !normalizedProductSearch || product.name.toLowerCase().includes(normalizedProductSearch));
   const registeredKeys = new Set(
     items.map(
       (item) =>
@@ -339,15 +348,22 @@ export default function MediaManager() {
           </label>
           <label className="mt-4 block text-sm font-medium">
             Product
+            <input
+              className="mt-2 w-full border border-line p-2"
+              value={productSearch}
+              onChange={(event) => setProductSearch(event.target.value)}
+              placeholder="Search product name"
+              type="search"
+            />
             <select
               className="mt-2 w-full border border-line p-2"
               value={productId}
               onChange={(event) => setProductId(event.target.value)}
             >
               <option value="">Site media (not product-linked)</option>
-              {products.map((product) => (
+              {filteredProducts.map((product) => (
                 <option key={product.id} value={product.id}>
-                  {product.name} · {product.sku}
+                  {product.name}
                 </option>
               ))}
             </select>
@@ -404,11 +420,21 @@ export default function MediaManager() {
               </p>
             </div>
             <span className="text-sm text-muted">
-              {items.length} item{items.length === 1 ? "" : "s"}
+              {filteredItems.length} of {items.length} item{items.length === 1 ? "" : "s"}
             </span>
           </div>
+          <label className="mb-5 block text-sm font-medium">
+            Search media or product
+            <input
+              className="mt-2 w-full rounded-xs border border-line bg-white p-3"
+              value={mediaSearch}
+              onChange={(event) => { setMediaSearch(event.target.value); setPage(1); }}
+              placeholder="Search filename, title, or product"
+              type="search"
+            />
+          </label>
           <div className="grid gap-6 sm:grid-cols-2 2xl:grid-cols-3">
-            {visibleItems.map((item) => (
+            {filteredVisibleItems.map((item) => (
               <article
                 key={item.id}
                 className="overflow-hidden rounded-xs border border-line bg-white"
@@ -515,11 +541,11 @@ export default function MediaManager() {
                 </div>
               </article>
             ))}
-            {!items.length ? (
+            {!filteredItems.length ? (
               <p className="text-sm text-muted">No registered R2 media yet.</p>
             ) : null}
           </div>
-          {items.length > 0 ? (
+          {filteredItems.length > 0 ? (
             <div className="mt-6 flex items-center justify-between border-t border-line pt-4 text-sm">
               <button
                 className="rounded-xs border border-line px-3 py-2 disabled:opacity-40"
@@ -529,11 +555,11 @@ export default function MediaManager() {
                 Previous
               </button>
               <span className="text-muted">
-                Page {page} of {pageCount} · {items.length} total
+                Page {page} of {filteredPageCount} · {filteredItems.length} matching
               </span>
               <button
                 className="rounded-xs border border-line px-3 py-2 disabled:opacity-40"
-                disabled={page === pageCount}
+                disabled={page === filteredPageCount}
                 onClick={() => setPage((current) => current + 1)}
               >
                 Next

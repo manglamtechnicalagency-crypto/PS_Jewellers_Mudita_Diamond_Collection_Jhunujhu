@@ -4,7 +4,6 @@ import type { AppState } from "../types";
 import Image from "next/image";
 
 export type SimplePageType =
-  | "account"
   | "tracking"
   | "store"
   | "appointment"
@@ -22,7 +21,6 @@ interface SimplePageProps {
 }
 
 const copy: Record<SimplePageType, [string, string]> = {
-  account: ["My Account", "Sign-in is coming soon. For now your recently viewed pieces are saved on this device."],
   tracking: ["Order Tracking", "Reserved a piece? Call or WhatsApp the showroom with your reservation reference and we will confirm its status."],
   store: ["Store Locator", "PS Jewellers, Jhunjhunu, Rajasthan. Visit the showroom for bridal consultation, gold jewellery and diamond collections."],
   appointment: ["Book Appointment", "Reserve a private jewellery consultation for bridal sets, diamond rings, or gold investment pieces."],

@@ -16,8 +16,8 @@ type Enquiry = {
   next_follow_up_at?: string | null;
   created_at: string;
   products?:
-    | { name?: string; sku?: string }
-    | Array<{ name?: string; sku?: string }>
+    | { name?: string }
+    | Array<{ name?: string }>
     | null;
 };
 type Staff = { id: string; display_name: string };
@@ -230,7 +230,7 @@ export default function EnquiryManager({
             </div>
             {product ? (
               <p className="mt-4 rounded-xs bg-gold-50 p-3 text-sm font-medium">
-                Product: {product.name} · {product.sku}
+                Product: {product.name}
               </p>
             ) : null}
             <p className="mt-4 whitespace-pre-wrap text-sm text-ink-soft">

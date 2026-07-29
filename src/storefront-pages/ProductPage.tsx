@@ -58,7 +58,6 @@ export default function ProductPage({ product, appState }: ProductPageProps) {
     ["Design", product.collection],
     ["Finish", product.specs.Finish ?? product.hallmark],
     ["Occasion", product.occasion],
-    ["SKU", product.sku],
     ["Craftsmanship", "Handcrafted"],
   ];
 

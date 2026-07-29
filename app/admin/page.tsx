@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import LogoutButton from "./_components/LogoutButton";
 import { requireAdmin } from "@/src/lib/admin-auth";
+import BrandLogo from "@/src/components/BrandLogo";
 
 const navigation = [
   { label: "Products", href: "/admin/products" },
@@ -90,9 +91,7 @@ export default async function AdminPage() {
         <aside className="border-b border-line bg-white px-6 py-6 lg:min-h-screen lg:w-64 lg:border-b-0 lg:border-r">
           <div className="flex items-center justify-between lg:block">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">
-                PS Jewellers
-              </p>
+              <BrandLogo className="h-20 w-20" priority />
               <p className="mt-2 font-serif text-2xl">Control panel</p>
             </div>
             <LogoutButton />
@@ -110,6 +109,9 @@ export default async function AdminPage() {
                 {item.label}
               </Link>
             ))}
+            <Link href="/admin/products/new" className="rounded-xs bg-ink px-3 py-2.5 text-sm font-semibold text-white hover:bg-gold-500 lg:mt-2">
+              + Add New Product
+            </Link>
           </nav>
         </aside>
         <section className="flex-1 px-5 py-8 lg:px-10 lg:py-12">
@@ -201,9 +203,7 @@ function AdminSetupMessage() {
   return (
     <main className="min-h-screen bg-cream px-5 py-16">
       <div className="mx-auto max-w-xl rounded-xs border border-line bg-white p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">
-          PS Jewellers
-        </p>
+        <BrandLogo className="h-24 w-24" priority />
         <h1 className="mt-3 font-serif text-4xl">Admin setup required</h1>
         <p className="mt-4 text-sm leading-6 text-ink-soft">
           The admin panel is server-protected, but Supabase is not configured in
@@ -220,9 +220,7 @@ function AdminErrorMessage() {
   return (
     <main className="min-h-screen bg-cream px-5 py-16">
       <div className="mx-auto max-w-xl rounded-xs border border-line bg-white p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">
-          PS Jewellers
-        </p>
+        <BrandLogo className="h-24 w-24" priority />
         <h1 className="mt-3 font-serif text-4xl">Admin data unavailable</h1>
         <p className="mt-4 text-sm leading-6 text-ink-soft">
           We could not load the admin data right now. Check the Supabase

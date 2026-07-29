@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { Product } from "../types";
 import { createSupabaseServerClient } from "./supabase/server";
 import { buildCatalogueProducts } from "./catalogue-data";
@@ -7,7 +8,7 @@ import { buildCatalogueProducts } from "./catalogue-data";
  * A null result means catalogue storage is unavailable or not configured;
  * callers must not substitute draft or source-file records for SEO output.
  */
-export async function getPublishedProductSlugs(): Promise<string[] | null> {
+export const getPublishedProductSlugs = cache(async function getPublishedProductSlugs(): Promise<string[] | null> {
   const client = await createSupabaseServerClient();
   if (!client) return null;
   const { data: rows, error } = await client
@@ -36,9 +37,9 @@ export async function getPublishedProductSlugs(): Promise<string[] | null> {
     .filter(
       (slug): slug is string => typeof slug === "string" && slug.length > 0,
     );
-}
+});
 
-export async function getPublishedCatalogue(): Promise<Product[] | null> {
+export const getPublishedCatalogue = cache(async function getPublishedCatalogue(): Promise<Product[] | null> {
   const client = await createSupabaseServerClient();
   if (!client) return null;
   const { data: rows, error } = await client
@@ -98,4 +99,4 @@ export async function getPublishedCatalogue(): Promise<Product[] | null> {
       reviewsCount: productReviews.length || product.reviewsCount,
     };
   });
-}
+});

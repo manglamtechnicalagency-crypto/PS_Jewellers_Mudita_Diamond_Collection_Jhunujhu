@@ -58,6 +58,21 @@ export async function createUploadUrl(
   return getSignedUrl(getR2Client(), command, { expiresIn: expiresInSeconds });
 }
 
+export async function uploadObject(
+  objectKey: string,
+  body: Uint8Array,
+  contentType: string,
+): Promise<void> {
+  const bucket = getEnv("R2_BUCKET_NAME");
+  await getR2Client().send(new PutObjectCommand({
+    Bucket: bucket,
+    Key: objectKey,
+    Body: body,
+    ContentType: contentType,
+    ContentLength: body.byteLength,
+  }));
+}
+
 export async function deleteObject(objectKey: string): Promise<void> {
   const bucket = getEnv("R2_BUCKET_NAME");
   await getR2Client().send(new DeleteObjectCommand({ Bucket: bucket, Key: objectKey }));

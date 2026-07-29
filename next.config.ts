@@ -3,6 +3,8 @@ import { buildContentSecurityPolicy, STATIC_SECURITY_HEADERS } from "./src/lib/s
 
 const remotePatterns: NonNullable<NextConfig["images"]>["remotePatterns"] = [
   { protocol: "https", hostname: "images.unsplash.com" },
+  // Cloudflare R2 public development buckets use pub-<id>.r2.dev hosts.
+  { protocol: "https", hostname: "*.r2.dev" },
 ];
 
 // Allow optimised images from the R2 public bucket when it is configured.

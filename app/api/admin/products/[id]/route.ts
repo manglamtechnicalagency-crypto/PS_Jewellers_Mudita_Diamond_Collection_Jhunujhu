@@ -14,6 +14,7 @@ const updateSchema = z
     name: z.string().trim().min(1).max(180).optional(),
     shortDescription: z.string().trim().max(500).optional(),
     longDescription: z.string().trim().max(5000).optional(),
+    careInstructions: z.string().trim().max(5000).optional(),
     categoryId: z.string().uuid().optional(),
     subcategoryId: z.string().uuid().nullable().optional(),
     collectionId: z.string().uuid().nullable().optional(),
@@ -58,10 +59,22 @@ const updateSchema = z
     seoKeywords: z.array(z.string().trim().min(1).max(80)).max(100).optional(),
     status: z.enum(["draft", "published", "archived"]).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    if (value.priceMode === "fixed" && (value.basePrice === undefined || value.basePrice === null || value.basePrice <= 0)) context.addIssue({ code: "custom", path: ["basePrice"], message: "Enter a regular price, or choose Price on request." });
+    if (value.discountType === "percentage" && value.discountValue !== undefined && value.discountValue > 100) context.addIssue({ code: "custom", path: ["discountValue"], message: "Percentage discount must be between 1 and 100." });
+    if (value.discountType && value.discountValue !== undefined && value.discountValue <= 0) context.addIssue({ code: "custom", path: ["discountValue"], message: "Offer discount must be greater than zero." });
+    if (value.discountType === "flat" && value.basePrice !== undefined && value.basePrice !== null && value.discountValue !== undefined && value.discountValue >= value.basePrice) context.addIssue({ code: "custom", path: ["discountValue"], message: "The offer discount must be lower than the regular price." });
+  });
 
 const productSelect =
-  "id, sku, slug, name, short_description, long_description, category_id, subcategory_id, collection_id, metal_type, metal_purity, metal_weight_grams, gross_weight_grams, net_weight_grams, stone_type, stone_carat, stone_clarity, stone_colour, stone_count, certification, certificate_number, hallmark_code, size_options, price_mode, base_price, making_charges, wastage_percent, gst_percent, display_price, price_on_request, discount_type, discount_value, stock_quantity, reserved_quantity, low_stock_threshold, sold_at, stock_status, workflow_status, publish_at, is_featured, is_new_arrival, is_best_seller, status, display_order, tags, seo_title, seo_description, seo_keywords, created_at, updated_at";
+  "id, sku, slug, name, short_description, long_description, care_instructions, category_id, subcategory_id, collection_id, metal_type, metal_purity, metal_weight_grams, gross_weight_grams, net_weight_grams, stone_type, stone_carat, stone_clarity, stone_colour, stone_count, certification, certificate_number, hallmark_code, size_options, price_mode, base_price, making_charges, wastage_percent, gst_percent, display_price, price_on_request, discount_type, discount_value, stock_quantity, reserved_quantity, low_stock_threshold, sold_at, stock_status, workflow_status, publish_at, is_featured, is_new_arrival, is_best_seller, status, display_order, tags, seo_title, seo_description, seo_keywords, created_at, updated_at";
+const productSelectWithoutCare = productSelect.replace(", care_instructions", "");
+
+function isMissingCareInstructionsColumn(error: { code?: string; message?: string; details?: string } | null) {
+  if (!error) return false;
+  return error.code === "42703" || error.code === "PGRST204" || `${error.message ?? ""} ${error.details ?? ""}`.toLowerCase().includes("care_instructions");
+}
 
 function errorResponse(status: number, code: string, message: string) {
   return NextResponse.json(
@@ -136,7 +149,7 @@ export async function PATCH(
   }
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success)
-    return errorResponse(422, "validation_error", "Product fields are invalid");
+    return errorResponse(422, "validation_error", parsed.error.issues[0]?.message ?? "Product fields are invalid");
   const product = parsed.data;
   const update = {
     ...(product.sku === undefined ? {} : { sku: product.sku }),
@@ -148,6 +161,9 @@ export async function PATCH(
     ...(product.longDescription === undefined
       ? {}
       : { long_description: product.longDescription }),
+    ...(product.careInstructions === undefined
+      ? {}
+      : { care_instructions: product.careInstructions }),
     ...(product.categoryId === undefined
       ? {}
       : { category_id: product.categoryId }),
@@ -264,13 +280,22 @@ export async function PATCH(
       : {}),
     updated_by: gate.auth.user.id,
   };
-  const { data: updated, error } = await gate.auth.client
+  let { data: updated, error } = await gate.auth.client
     .from("products")
     .update(update)
     .eq("id", id)
     .is("deleted_at", null)
     .select(productSelect)
     .single();
+  if (isMissingCareInstructionsColumn(error)) {
+    ({ data: updated, error } = await gate.auth.client
+      .from("products")
+      .update(update)
+      .eq("id", id)
+      .is("deleted_at", null)
+      .select(productSelectWithoutCare)
+      .single());
+  }
   if (error)
     return errorResponse(
       error.code === "23505" ? 409 : 500,

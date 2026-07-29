@@ -23,7 +23,7 @@ const activityTypes = [
   "follow_up",
 ] as const;
 const select =
-  "id, name, email, phone, message, product_id, customer_id, status, source, preferred_contact, assigned_to, internal_notes, next_follow_up_at, last_contacted_at, resolved_at, created_at, updated_at, products(name, sku, slug)";
+  "id, name, email, phone, message, product_id, customer_id, status, source, preferred_contact, assigned_to, internal_notes, next_follow_up_at, last_contacted_at, resolved_at, created_at, updated_at, products(name, slug)";
 
 function errorResponse(status: number, code: string, message: string) {
   return NextResponse.json(
