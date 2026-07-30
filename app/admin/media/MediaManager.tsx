@@ -266,7 +266,7 @@ export default function MediaManager() {
   }
 
   async function remove(id: string) {
-    if (!window.confirm("Delete this media from the live catalogue?")) return;
+    if (!window.confirm("Delete this media from the live catalogue? It will also be unlinked from any products.")) return;
     setDeleteErrors((current) => {
       const next = { ...current };
       delete next[id];

@@ -180,6 +180,7 @@ export async function POST(request: Request) {
       .is("deleted_at", null);
     if (approvalError) {
       console.error("[admin-media] product_media_approval_failed", { errorName: approvalError.message });
+      return errorResponse(500, "approval_failed", "Media was registered but could not be approved");
     }
   }
   return NextResponse.json(
@@ -229,56 +230,19 @@ export async function DELETE(request: Request) {
   const parsed = z.object({ id: z.string().uuid() }).safeParse(body);
   if (!parsed.success)
     return errorResponse(422, "validation_error", "Media id is invalid");
-  const { data: media, error: lookupError } = await auth.client
-    .from("media")
-    .select("id, storage_key")
-    .eq("id", parsed.data.id)
-    .is("deleted_at", null)
-    .single();
-  if (lookupError || !media)
-    return errorResponse(404, "not_found", "Media was not found");
-  // Fetch the product names, not just a count. "Unlink this from its product"
-  // is useless advice if the admin cannot tell which of 17 products it means —
-  // they end up opening each one in turn.
-  const { data: links, error: linksError } = await auth.client
-    .from("product_media")
-    .select("product_id, products(name)")
-    .eq("media_id", media.id)
-    .limit(5);
-  if (linksError)
-    return errorResponse(
-      500,
-      "database_error",
-      "Media links could not be checked",
-    );
-  if (links?.length) {
-    const names = links
-      .map((link) => {
-        const product = (link as { products?: { name?: string } | { name?: string }[] }).products;
-        const entry = Array.isArray(product) ? product[0] : product;
-        return entry?.name;
-      })
-      .filter((name): name is string => Boolean(name));
-    return errorResponse(
-      409,
-      "media_in_use",
-      names.length
-        ? `This image is still used by ${names.join(", ")}. Remove it from that product first, then delete it here.`
-        : "This image is still linked to a product. Remove it from that product first, then delete it here.",
-    );
-  }
-  const { error } = await auth.client
-    .from("media")
-    .update({
-      deleted_at: new Date().toISOString(),
-      deleted_by: auth.user.id,
-      is_active: false,
-    })
-    .eq("id", media.id);
-  if (error)
+  const { data: storageKey, error } = await auth.client.rpc("archive_media", {
+    p_media_id: parsed.data.id,
+  });
+  if (error) {
+    if (error.code === "P0002")
+      return errorResponse(404, "not_found", "Media was not found");
+    if (error.code === "42501")
+      return errorResponse(403, "forbidden", "Only administrators can delete media");
+    console.error("[admin-media] archive_failed", { errorCode: error.code });
     return errorResponse(500, "database_error", "Media could not be deleted");
+  }
   try {
-    await deleteObject(media.storage_key);
+    await deleteObject(storageKey);
   } catch (error) {
     console.error("[admin-media] object_delete_failed", {
       errorName: error instanceof Error ? error.name : "UnknownError",
@@ -290,7 +254,7 @@ export async function DELETE(request: Request) {
     );
   }
   return NextResponse.json(
-    { data: { id: media.id } },
+    { data: { id: parsed.data.id } },
     { headers: { "Cache-Control": "no-store" } },
   );
 }
