@@ -24,6 +24,21 @@ export type PublicReview = {
   created_at: string;
 };
 
+/**
+ * A review this visitor just submitted, held locally for the rest of the page
+ * view.
+ *
+ * The server cannot return it: it is `pending`, and the public read path is
+ * approved-only by design. Without this the customer submits, sees the list
+ * still say "No reviews yet", and reasonably concludes the form is broken —
+ * which is exactly what happened.
+ *
+ * It is labelled as pending and never merged into the public list, so nobody
+ * is misled into thinking unapproved text is live on the storefront. It
+ * disappears on refresh, because it was never public in the first place.
+ */
+type LocalPendingReview = PublicReview & { pending: true };
+
 const dateFormat = new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" });
 
 function Stars({ rating }: { rating: number }) {
@@ -86,6 +101,7 @@ export default function ProductReviews({
   ratingCount?: number;
 }) {
   const [reviews, setReviews] = useState<PublicReview[]>([]);
+  const [myPending, setMyPending] = useState<LocalPendingReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [rating, setRating] = useState(0);
   const [body, setBody] = useState("");
@@ -130,6 +146,22 @@ export default function ProductReviews({
         setError(payload?.error?.message ?? "Your review could not be submitted. Please try again.");
         return;
       }
+      // Show it back to the customer straight away. Built from what they just
+      // typed, not from the server, because the server will not return a
+      // pending row to a public reader.
+      setMyPending((current) => [
+        {
+          id: `pending-${Date.now()}`,
+          author_name: authorName,
+          rating,
+          title: "",
+          body,
+          is_verified_purchase: false,
+          created_at: new Date().toISOString(),
+          pending: true,
+        },
+        ...current,
+      ]);
       setSubmitted(true);
       setRating(0);
       setBody("");
@@ -162,8 +194,28 @@ export default function ProductReviews({
         <div>
           {loading ? (
             <p className="text-sm text-muted">Loading reviews…</p>
-          ) : reviews.length ? (
+          ) : myPending.length || reviews.length ? (
             <div className="grid gap-4">
+              {/* This visitor's just-submitted reviews sit on top, visually
+                  separated so they are never mistaken for published ones. */}
+              {myPending.map((review) => (
+                <article key={review.id} className="rounded-xs border border-dashed border-gold-500 bg-gold-50/40 p-6">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Stars rating={review.rating} />
+                    <span className="rounded-full bg-gold-500 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white">
+                      Awaiting approval
+                    </span>
+                  </div>
+                  <p className="mt-2 whitespace-pre-line text-ink-soft">{review.body}</p>
+                  <p className="mt-3 text-sm">
+                    <strong className="text-ink">{review.author_name}</strong>
+                  </p>
+                  <p className="mt-2 text-xs leading-5 text-muted">
+                    This is your review. Only you can see it — it will appear here for everyone once our team has
+                    approved it.
+                  </p>
+                </article>
+              ))}
               {reviews.map((review) => (
                 <article key={review.id} className="rounded-xs border border-line bg-white p-6">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -193,9 +245,19 @@ export default function ProductReviews({
         <div className="rounded-xs border border-line bg-cream p-6">
           <h3 className="font-serif text-lg text-ink">Write a review</h3>
           {submitted ? (
-            <p role="status" className="mt-3 rounded-xs border border-gold-500 bg-white p-3 text-sm leading-6 text-ink-soft">
-              Thank you. Your review has been sent to our team and will appear here once approved.
-            </p>
+            <div className="mt-3 flex flex-col gap-3">
+              <p role="status" className="rounded-xs border border-gold-500 bg-white p-3 text-sm leading-6 text-ink-soft">
+                Thank you. Your review is shown on the left and has been sent to our team — it will be visible to
+                everyone once approved.
+              </p>
+              <button
+                type="button"
+                onClick={() => setSubmitted(false)}
+                className="min-h-11 text-sm font-medium text-gold-600 hover:underline"
+              >
+                Write another review
+              </button>
+            </div>
           ) : (
             <form className="mt-4 flex flex-col gap-4" onSubmit={submit}>
               <RatingPicker value={rating} onChange={setRating} />
