@@ -11,6 +11,19 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 25;
 
+/**
+ * ?q= is user input. Trimmed and capped; the value is only ever used inside a
+ * parameterised PostgREST filter, never concatenated into raw SQL.
+ *
+ * Commas and parentheses are stripped because PostgREST's `.or()` uses them as
+ * its own delimiters — a name containing one would otherwise break the filter
+ * apart and change which columns are searched.
+ */
+function parseQuery(raw: string | string[] | undefined) {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return (value ?? "").replace(/[,()]/g, " ").trim().slice(0, 80);
+}
+
 /** ?page= is user input: accept positive integers only, anything else is page 1. */
 function parsePage(raw: string | string[] | undefined) {
   const value = Array.isArray(raw) ? raw[0] : raw;
@@ -27,6 +40,7 @@ export default async function AdminProductsPage({
 }) {
   const resolvedSearchParams = (await searchParams) ?? {};
   const requestedPage = parsePage(resolvedSearchParams.page);
+  const query = parseQuery(resolvedSearchParams.q);
   const auth = await requireAdmin();
   if (auth.error === "not_configured")
     return <p className="p-10">Configure Supabase before using products.</p>;
@@ -45,13 +59,23 @@ export default async function AdminProductsPage({
   const client = auth.client;
   const fetchPage = (page: number) => {
     const from = (page - 1) * PAGE_SIZE;
-    return client
+    let request = client
       .from("products")
       .select(
         "id, slug, name, display_price, status, stock_quantity, updated_at",
         { count: "exact" },
       )
-      .is("deleted_at", null)
+      .is("deleted_at", null);
+    // Filtered in the query rather than in the browser: the list is paginated
+    // at 25, so a client-side filter would only ever search the current page
+    // and would confidently report "no results" for a product two pages away.
+    if (query) {
+      const pattern = `%${query}%`;
+      request = request.or(
+        `name.ilike.${pattern},sku.ilike.${pattern},slug.ilike.${pattern}`,
+      );
+    }
+    return request
       .order("display_order")
       .order("updated_at", { ascending: false })
       .range(from, from + PAGE_SIZE - 1);
@@ -133,6 +157,7 @@ export default async function AdminProductsPage({
         <ProductManager
           initialProducts={productsWithImages}
           pagination={{ page: currentPage, pageSize: PAGE_SIZE, total, totalPages, rangeStart, rangeEnd }}
+          query={query}
         />
         {/* Only rendered for roles the bulk and import APIs actually accept —
             a viewer would otherwise get a 403 after filling the form in. */}

@@ -23,7 +23,7 @@ interface Pagination {
   rangeEnd: number;
 }
 
-export default function ProductManager({ initialProducts, pagination }: { initialProducts: ProductRow[]; pagination?: Pagination }) {
+export default function ProductManager({ initialProducts, pagination, query = "" }: { initialProducts: ProductRow[]; pagination?: Pagination; query?: string }) {
   const [products, setProducts] = useState(initialProducts);
   const [message, setMessage] = useState("");
 
@@ -54,12 +54,50 @@ export default function ProductManager({ initialProducts, pagination }: { initia
 
   return (
     <section className="mt-8">
-      <div className="flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-center">
+      <div className="flex flex-col items-stretch justify-between gap-4 lg:flex-row lg:items-center">
         <h2 className="font-serif text-2xl">Product list</h2>
-        <Link href="/admin/products/new" className="w-full bg-ink px-4 py-3 text-center text-sm font-semibold text-white hover:bg-gold-500 sm:w-auto">
-          + Add New Product
-        </Link>
+        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+          {/* Plain GET form: no JS required, the result is linkable and
+              bookmarkable, and refreshing keeps the search. Submitting drops
+              ?page so a search always starts at page 1 — carrying the old page
+              number over lands on an empty page whenever the filtered set is
+              smaller. */}
+          <form method="get" action="/admin/products" className="flex items-stretch gap-2" role="search">
+            <label htmlFor="product-search" className="sr-only">
+              Search products by name, SKU or slug
+            </label>
+            <input
+              id="product-search"
+              type="search"
+              name="q"
+              defaultValue={query}
+              placeholder="Search name, SKU or slug"
+              className="min-h-11 w-full border border-line px-3 text-sm text-ink sm:w-64"
+            />
+            <button className="min-h-11 shrink-0 border border-line px-4 text-sm font-semibold text-ink hover:border-gold-500">
+              Search
+            </button>
+            {query ? (
+              <Link
+                href="/admin/products"
+                className="inline-flex min-h-11 shrink-0 items-center px-2 text-sm font-medium text-gold-600 hover:underline"
+              >
+                Clear
+              </Link>
+            ) : null}
+          </form>
+          <Link href="/admin/products/new" className="w-full bg-ink px-4 py-3 text-center text-sm font-semibold text-white hover:bg-gold-500 sm:w-auto">
+            + Add New Product
+          </Link>
+        </div>
       </div>
+      {query ? (
+        <p className="mt-3 text-sm text-ink-soft" role="status">
+          {pagination?.total
+            ? `${pagination.total} product${pagination.total === 1 ? "" : "s"} matching “${query}”.`
+            : `No products match “${query}”.`}
+        </p>
+      ) : null}
       <div className="mt-4 overflow-hidden rounded-xs border border-line bg-white">
         <div className="divide-y divide-line lg:hidden">
           {products.map((product) => <article key={product.id} className="p-4">
@@ -95,7 +133,7 @@ export default function ProductManager({ initialProducts, pagination }: { initia
           </p>
           <div className="flex items-center gap-3">
             {pagination.page > 1 ? (
-              <a className="inline-flex min-h-11 items-center justify-center rounded-xs border border-line px-4 text-sm font-semibold text-gold-700 hover:border-gold-500" href={`/admin/products?page=${pagination.page - 1}`}>
+              <a className="inline-flex min-h-11 items-center justify-center rounded-xs border border-line px-4 text-sm font-semibold text-gold-700 hover:border-gold-500" href={`/admin/products?page=${pagination.page - 1}${query ? `&q=${encodeURIComponent(query)}` : ""}`}>
                 Previous
               </a>
             ) : (
@@ -105,7 +143,7 @@ export default function ProductManager({ initialProducts, pagination }: { initia
             )}
             <span className="text-sm text-muted">Page {pagination.page} of {pagination.totalPages}</span>
             {pagination.page < pagination.totalPages ? (
-              <a className="inline-flex min-h-11 items-center justify-center rounded-xs border border-line px-4 text-sm font-semibold text-gold-700 hover:border-gold-500" href={`/admin/products?page=${pagination.page + 1}`}>
+              <a className="inline-flex min-h-11 items-center justify-center rounded-xs border border-line px-4 text-sm font-semibold text-gold-700 hover:border-gold-500" href={`/admin/products?page=${pagination.page + 1}${query ? `&q=${encodeURIComponent(query)}` : ""}`}>
                 Next
               </a>
             ) : (
