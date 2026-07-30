@@ -3,17 +3,21 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hasValidSameOrigin, requireAdmin } from "@/src/lib/admin-auth";
 import { deleteObject, publicObjectUrl, uploadObject } from "@/src/lib/r2-server";
-import { validateProductMediaSelection } from "@/src/lib/product-media-policy";
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, validateProductMediaSelection } from "@/src/lib/product-media-policy";
 
 export const runtime = "nodejs";
 
-const MAX_MEDIA_BYTES = 30 * 1024 * 1024;
+// Single source of truth: the product media policy owns every size limit.
+const MAX_MEDIA_BYTES = Math.max(MAX_IMAGE_BYTES, MAX_VIDEO_BYTES);
 const metadataSchema = z.object({
   productId: z.string().uuid(),
   role: z.enum(["primary", "gallery", "hover", "spin", "certificate"]),
   displayOrder: z.coerce.number().int().nonnegative(),
   title: z.string().max(180).default(""),
   altText: z.string().max(180).default(""),
+  // Measured by the browser before upload. Advisory — a caller can lie — but the
+  // size and type limits below are authoritative regardless.
+  durationSeconds: z.coerce.number().positive().optional(),
 }).strict();
 
 function errorResponse(status: number, code: string, message: string) {
@@ -39,6 +43,7 @@ export async function POST(request: Request) {
     displayOrder: form.get("displayOrder"),
     title: form.get("title") ?? "",
     altText: form.get("altText") ?? "",
+    ...(form.get("durationSeconds") ? { durationSeconds: form.get("durationSeconds") } : {}),
   });
   if (!metadata.success) return errorResponse(422, "validation_error", "Media fields are invalid");
   if (!/^(image\/(jpeg|png|webp|avif)|video\/(mp4|webm|quicktime))$/.test(file.type)) return errorResponse(422, "unsupported_media", "This media type is not supported");
@@ -49,7 +54,7 @@ export async function POST(request: Request) {
     const media = Array.isArray(link.media) ? link.media[0] : link.media;
     return { type: String(media?.mime_type ?? "") };
   });
-  const policy = validateProductMediaSelection([{ type: file.type, size: file.size }], existingTypes);
+  const policy = validateProductMediaSelection([{ name: file.name, type: file.type, size: file.size, duration: metadata.data.durationSeconds }], existingTypes);
   if (!policy.valid) return errorResponse(422, "media_limit", policy.message ?? "Product media is invalid");
 
   const extension = file.type.split("/")[1].replace("jpeg", "jpg");

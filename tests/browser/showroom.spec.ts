@@ -53,7 +53,7 @@ test("admin surface remains protected", async ({ request }) => {
 test.describe("authenticated staging admin checks", () => {
   test.skip(!process.env.E2E_ADMIN_STORAGE_STATE, "Set E2E_ADMIN_STORAGE_STATE for an isolated staging admin session");
 
-  for (const route of ["/admin", "/admin/media", "/admin/products", "/admin/enquiries", "/admin/audit"]) {
+  for (const route of ["/admin", "/admin/media", "/admin/products", "/admin/catalogue", "/admin/settings"]) {
     test(`${route} renders for an authenticated staging admin`, async ({ page }) => {
       await page.goto(route);
       await expect(page).not.toHaveURL(/\/admin\/login/);

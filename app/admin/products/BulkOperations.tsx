@@ -35,7 +35,7 @@ export default function BulkOperations({ products }: { products: Product[] }) {
       <h2 className="font-serif text-2xl">Bulk operations</h2>
       <p className="mt-1 text-sm text-ink-soft">
         Select products, then publish, archive, update stock, or adjust
-        displayed prices.
+        displayed prices. Applies to the products on this page.
       </p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {products.map((product) => (

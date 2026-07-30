@@ -31,6 +31,14 @@ export default {
         cream: "#fbf8f2",
         line: "#ece3d2",
         muted: "#7a7566",
+        // WhatsApp is the storefront's only conversion path, so its green is a
+        // brand colour here rather than a magic hex repeated in each component.
+        // Deliberately darker than WhatsApp's #25D366: that fails contrast
+        // against white text, this clears 4.5:1.
+        whatsapp: {
+          DEFAULT: "#1f8f55",
+          dark: "#177544",
+        },
         success: "#3f7a4e",
         error: "#b3423a",
         warning: "#b9822f",

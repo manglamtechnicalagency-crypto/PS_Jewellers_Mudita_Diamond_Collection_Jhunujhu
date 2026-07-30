@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import SiteLayout from "../components/SiteLayout";
 import ProductCard from "../components/ProductCard";
-import { products } from "../data";
+// Deliberately does not import the seed catalogue: App always supplies the live
+// list, and importing src/data.ts here shipped it to every visitor.
 import type { AppState, Product } from "../types";
 
 interface ShopPageProps {
@@ -37,7 +38,7 @@ export default function ShopPage({
 }: ShopPageProps) {
   const [category, setCategory] = useState(initialFilter);
   const [sort, setSort] = useState<SortKey>("featured");
-  const list = customProducts || products;
+  const list = customProducts ?? [];
   const searchTerm = (appState?.searchTerm || "").trim();
 
   const filtered = useMemo(() => {

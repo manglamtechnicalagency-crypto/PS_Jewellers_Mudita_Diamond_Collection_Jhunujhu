@@ -7,8 +7,13 @@ import ShopPage from "./storefront-pages/ShopPage";
 import ProductPage from "./storefront-pages/ProductPage";
 import SimplePage from "./storefront-pages/SimplePage";
 import NotFoundPage from "./storefront-pages/NotFoundPage";
-import { products } from "./data";
 import { createSupabaseBrowserClient } from "./lib/supabase/browser";
+import {
+  SHOP_ALIASES,
+  SIMPLE_ROUTES,
+  filterProductsForRoute,
+  findCatalogueRoute,
+} from "./lib/storefront-routes";
 import type {
   AppState,
   HomepageSettings,
@@ -31,17 +36,9 @@ function normalizePath(pathname: string): string {
   return path.toLowerCase();
 }
 
-function categoryFromPath(path: string): string | undefined {
-  const map: Record<string, string> = {
-    "/gold-jewellery": "Gold Jewellery",
-    "/diamond-jewellery": "Diamond Jewellery",
-    "/rings": "Rings",
-    "/necklaces": "Necklaces",
-    "/earrings": "Earrings",
-    "/silver-jewellery": "Silver Jewellery",
-  };
-  return map[path];
-}
+// Category resolution now lives in src/lib/storefront-routes.ts, alongside the
+// nav, the sitemap, and every other listing route, so the four lists cannot
+// drift apart again.
 
 export default function App({
   initialProducts,
@@ -51,8 +48,11 @@ export default function App({
   const [recentlyViewed, setRecentlyViewed] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [hydrated, setHydrated] = useState(false);
+  // The server always supplies this (published catalogue, or the seed file in
+  // development). Importing the seed here as a fallback pulled all ~46 KB of
+  // src/data.ts into the client bundle for every visitor.
   const [catalogueProducts, setCatalogueProducts] = useState<Product[]>(
-    initialProducts ?? products,
+    initialProducts ?? [],
   );
   const [homepageSettings, setHomepageSettings] = useState<HomepageSettings>(
     defaultHomepageSettings,
@@ -99,7 +99,14 @@ export default function App({
     // The catalogue is already rendered on the server. Avoid a duplicate
     // request during first paint; the interval and realtime channel keep it
     // fresh after the page is interactive.
-    const interval = window.setInterval(refreshCatalogue, 30_000);
+    // Realtime below is the primary freshness mechanism; this interval only
+    // covers a dropped socket. Skipping hidden tabs stops a backgrounded phone
+    // from pulling the full catalogue every 30 seconds all day.
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refreshCatalogue();
+    }, 60_000);
+    const onVisible = () => { if (document.visibilityState === "visible") void refreshCatalogue(); };
+    document.addEventListener("visibilitychange", onVisible);
     const supabase = createSupabaseBrowserClient();
     const channel = supabase
       ?.channel("catalogue-live-sync")
@@ -122,6 +129,7 @@ export default function App({
     return () => {
       cancelled = true;
       window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
       if (supabase && channel) void supabase.removeChannel(channel);
     };
   }, []);
@@ -145,37 +153,41 @@ export default function App({
 
   if (path === "/")
     return <HomePage appState={appState} settings={homepageSettings} products={catalogueProducts} />;
-  if (path === "/shop" || path === "/portfolio")
+  if (SHOP_ALIASES.includes(path))
     return <ShopPage appState={appState} customProducts={catalogueProducts} />;
-  const filterFromCategoryPath = categoryFromPath(path);
-  if (filterFromCategoryPath)
+
+  // Every product listing — /shop, the category pages, and the tag-style pages
+  // (New In, Bridal, Offers, Best Sellers, sub-categories) — resolves through
+  // one table. A "category" route also preselects the dropdown so the existing
+  // pages behave exactly as before.
+  const catalogueRoute = findCatalogueRoute(path);
+  if (catalogueRoute) {
+    // A category route hands over the WHOLE catalogue and just preselects the
+    // dropdown, so the shopper can switch category without leaving the page.
+    // Pre-filtering here would strand them: picking "Rings" on /gold-jewellery
+    // would return nothing. Every other kind has no dropdown equivalent, so it
+    // filters up front.
+    const isCategory = catalogueRoute.kind === "category";
     return (
-      <ShopPage appState={appState} initialFilter={filterFromCategoryPath} customProducts={catalogueProducts} />
+      <ShopPage
+        appState={appState}
+        title={catalogueRoute.title}
+        customProducts={isCategory ? catalogueProducts : filterProductsForRoute(catalogueRoute, catalogueProducts)}
+        initialFilter={isCategory ? (catalogueRoute.value ?? "") : ""}
+        emptyMessage={catalogueRoute.emptyMessage}
+      />
     );
-  if (path === "/order-tracking")
-    return <SimplePage appState={appState} type="tracking" />;
-  if (path === "/store-locator")
-    return <SimplePage appState={appState} type="store" />;
-  if (path === "/book-appointment")
-    return <SimplePage appState={appState} type="appointment" />;
-  if (path === "/about") return <SimplePage appState={appState} type="about" />;
-  if (path === "/blog" || path === "/journal")
-    return <SimplePage appState={appState} type="blog" />;
-  if (path === "/contact")
-    return <SimplePage appState={appState} type="contact" />;
-  if (path === "/faq") return <SimplePage appState={appState} type="faq" />;
-  if (path === "/privacy-policy")
-    return <SimplePage appState={appState} type="privacy" />;
-  if (path === "/terms") return <SimplePage appState={appState} type="terms" />;
-  if (path === "/return-policy")
-    return <SimplePage appState={appState} type="returns" />;
+  }
+
+  const simpleType = SIMPLE_ROUTES[path];
+  if (simpleType) return <SimplePage appState={appState} type={simpleType} />;
   if (path.startsWith("/product/") || path.startsWith("/project/")) {
     const slug = path.split("/").pop() ?? "";
     const product = catalogueProducts.find((item) => item.slug === slug);
     // Phase 2 fix (see Phases.md): an unknown slug now renders NotFoundPage
     // instead of silently falling back to the first product in the catalogue.
     return product ? (
-      <ProductPage product={product} appState={appState} />
+      <ProductPage product={product} appState={appState} catalogue={catalogueProducts} />
     ) : (
       <NotFoundPage appState={appState} />
     );

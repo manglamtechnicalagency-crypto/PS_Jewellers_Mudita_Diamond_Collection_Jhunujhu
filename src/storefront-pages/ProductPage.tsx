@@ -2,13 +2,19 @@ import { useEffect, useMemo, useState } from "react";
 import SiteLayout from "../components/SiteLayout";
 import ProductCard from "../components/ProductCard";
 import WhatsAppButton from "../components/WhatsAppButton";
-import { categoryToPath, formatPrice, products, trustItems } from "../data";
+import { categoryToPath, formatPrice, trustItems } from "../data";
 import type { AppState, Product } from "../types";
 import Image from "next/image";
 
 interface ProductPageProps {
   product: Product;
   appState?: AppState;
+  /**
+   * The live published catalogue. "Related" and "recently viewed" used to be
+   * derived from the static seed file, so they showed products that may not be
+   * in the real catalogue at all — and linked to slugs that 404.
+   */
+  catalogue?: Product[];
 }
 
 const featureBadges = [
@@ -18,12 +24,12 @@ const featureBadges = [
   { label: "Perfect for Gifting" },
 ];
 
-export default function ProductPage({ product, appState }: ProductPageProps) {
+export default function ProductPage({ product, appState, catalogue = [] }: ProductPageProps) {
   const [activeImage, setActiveImage] = useState(product.images[0]);
 
   const related = useMemo(
     () =>
-      products
+      catalogue
         .filter(
           (item) =>
             item.id !== product.id &&
@@ -31,18 +37,18 @@ export default function ProductPage({ product, appState }: ProductPageProps) {
               item.collection === product.collection),
         )
         .slice(0, 4),
-    [product],
+    [product, catalogue],
   );
   const recent = useMemo(
     () =>
-      products
+      catalogue
         .filter(
           (item) =>
             appState?.recentlyViewed?.includes(item.id) &&
             item.id !== product.id,
         )
         .slice(0, 4),
-    [appState?.recentlyViewed, product.id],
+    [appState?.recentlyViewed, product.id, catalogue],
   );
 
   useEffect(() => {

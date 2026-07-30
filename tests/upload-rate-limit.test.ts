@@ -20,7 +20,7 @@ afterEach(restoreEnv);
 const env = process.env as Record<string, string | undefined>;
 
 function request(headers: Record<string, string> = {}): Request {
-  return new Request("https://example.com/api/r2-presign", { method: "POST", headers });
+  return new Request("https://example.com/api/admin/media/presign", { method: "POST", headers });
 }
 
 describe("getTrustedClientKey", () => {

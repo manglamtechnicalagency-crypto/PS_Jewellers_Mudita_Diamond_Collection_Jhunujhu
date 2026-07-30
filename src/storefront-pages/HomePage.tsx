@@ -247,23 +247,7 @@ export default function HomePage({ appState, settings, products }: HomePageProps
         </div>
       </section>
 
-      <section className="mx-auto max-w-content px-4 py-12 text-center sm:px-5 sm:py-16 lg:px-10">
-        <SectionTitle kicker="Newsletter" title="Get collection previews and offer alerts." />
-        <form onSubmit={(event) => event.preventDefault()} className="mx-auto flex max-w-md flex-col gap-2 sm:flex-row">
-          <input
-            type="email"
-            required
-            aria-label="Email address"
-            placeholder="Enter your email"
-            className="min-h-12 w-full rounded-xs border border-line px-4 text-ink focus:border-gold-500 focus:outline-none sm:flex-1"
-          />
-          <button type="submit" className="inline-flex min-h-12 items-center justify-center rounded-xs bg-ink px-6 text-sm font-semibold text-white transition-colors hover:bg-gold-500">
-            Subscribe
-          </button>
-        </form>
-      </section>
-
-      <section className="mx-auto max-w-content px-4 pb-12 sm:px-5 sm:pb-16 lg:px-10">
+      <section className="mx-auto max-w-content px-4 pb-12 pt-12 sm:px-5 sm:pb-16 sm:pt-16 lg:px-10">
         <SectionTitle kicker="Blog" title="Jewellery buying guides." />
         <div className="grid gap-4 sm:grid-cols-3 sm:gap-6">
           {blogPosts.map((post) => (

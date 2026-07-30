@@ -20,17 +20,6 @@ async function queryD1<T>(sql: string, params: Array<string | number | null> = [
   return payload.result?.[0]?.results ?? [];
 }
 
-export async function getD1Catalogue(): Promise<Product[] | null> {
-  if (!d1Config()) return null;
-  try {
-    const rows = await queryD1<{ payload: string }>("select payload from catalogue_products order by updated_at desc");
-    return rows.flatMap((row) => { try { const value = JSON.parse(row.payload) as Product; return value.images?.length ? [value] : []; } catch { return []; } });
-  } catch (error) {
-    console.error("[d1] catalogue_read_failed", { errorName: error instanceof Error ? error.name : "UnknownError" });
-    return null;
-  }
-}
-
 export async function syncD1Catalogue(products: Product[]): Promise<void> {
   if (!d1Config()) throw new Error("Cloudflare D1 is not configured");
   await queryD1("delete from catalogue_products");

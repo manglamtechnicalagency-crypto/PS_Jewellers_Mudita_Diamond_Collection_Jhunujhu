@@ -2,6 +2,7 @@ import { formatPrice } from "../data";
 import type { AppState, Product } from "../types";
 import Image from "next/image";
 import { whatsappHref } from "../lib/storefront-enquiry";
+import WhatsAppIcon from "./WhatsAppIcon";
 
 interface ProductCardProps {
   product: Product;
@@ -27,7 +28,7 @@ export default function ProductCard({ product, compact = false }: ProductCardPro
         </div>
         <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-muted sm:gap-x-3 sm:text-xs"><span>{product.purity}</span><span>{product.weight}</span>{product.reviewsCount > 0 ? <span>{product.rating} ★</span> : null}</div>
         <div className="mt-auto flex flex-col gap-2 pt-3 sm:flex-row sm:items-center">
-          <button type="button" onClick={() => window.open(whatsappHref(product), "_blank", "noopener,noreferrer")} className="inline-flex min-h-11 w-full items-center justify-center rounded-xs bg-gold-500 px-3 text-center text-sm font-medium text-white transition-colors hover:bg-gold-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500 focus-visible:ring-offset-2 sm:flex-1"><span aria-hidden="true" className="mr-1">💬</span> WhatsApp</button>
+          <button type="button" onClick={() => window.open(whatsappHref(product), "_blank", "noopener,noreferrer")} className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xs bg-gold-500 px-3 text-center text-sm font-medium text-white transition-colors hover:bg-gold-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500 focus-visible:ring-offset-2 sm:flex-1"><WhatsAppIcon className="h-4 w-4" /> WhatsApp</button>
           <a href={`/product/${product.slug}`} className="inline-flex min-h-11 w-full items-center justify-center rounded-xs border border-line px-3 text-center text-sm font-medium text-ink-soft transition-colors hover:border-gold-500 hover:text-gold-600 sm:w-auto sm:shrink-0">Quick View</a>
         </div>
       </div>

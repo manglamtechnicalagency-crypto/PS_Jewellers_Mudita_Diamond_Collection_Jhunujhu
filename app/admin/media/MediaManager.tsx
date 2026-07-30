@@ -319,7 +319,7 @@ export default function MediaManager() {
 
   return (
     <section className="mt-8">
-      <div className="mb-5 rounded-xs border border-line bg-white p-5">
+      <div className="mb-5 rounded-xs border border-line bg-white p-4 sm:p-5">
         <h2 className="font-serif text-2xl">Live media gallery</h2>
         <p className="mt-2 text-sm text-ink-soft">
           Published product media and active site-gallery media appear here.
@@ -327,9 +327,9 @@ export default function MediaManager() {
           existing links.
         </p>
       </div>
-      <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[320px_1fr] xl:grid-cols-[360px_1fr]">
         <form
-          className="h-fit rounded-xs border border-line bg-white p-5"
+          className="h-fit rounded-xs border border-line bg-white p-4 sm:p-5"
           onSubmit={(event) => {
             event.preventDefault();
             void upload();
@@ -339,7 +339,7 @@ export default function MediaManager() {
           <label className="mt-5 block text-sm font-medium">
             File
             <input
-              className="mt-2 block w-full text-sm"
+              className="mt-2 block min-h-11 w-full text-sm"
               type="file"
               accept={ACCEPTED_MEDIA}
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
@@ -349,14 +349,14 @@ export default function MediaManager() {
           <label className="mt-4 block text-sm font-medium">
             Product
             <input
-              className="mt-2 w-full border border-line p-2"
+              className="mt-2 min-h-11 w-full border border-line px-3 py-2"
               value={productSearch}
               onChange={(event) => setProductSearch(event.target.value)}
               placeholder="Search product name"
               type="search"
             />
             <select
-              className="mt-2 w-full border border-line p-2"
+              className="mt-2 min-h-11 w-full border border-line px-3 py-2"
               value={productId}
               onChange={(event) => setProductId(event.target.value)}
             >
@@ -371,7 +371,7 @@ export default function MediaManager() {
           <label className="mt-4 block text-sm font-medium">
             Product media role
             <select
-              className="mt-2 w-full border border-line p-2"
+              className="mt-2 min-h-11 w-full border border-line px-3 py-2"
               value={role}
               onChange={(event) => setRole(event.target.value)}
             >
@@ -385,7 +385,7 @@ export default function MediaManager() {
           <label className="mt-4 block text-sm font-medium">
             Title
             <input
-              className="mt-2 w-full border border-line p-2"
+              className="mt-2 min-h-11 w-full border border-line px-3 py-2"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
             />
@@ -393,13 +393,13 @@ export default function MediaManager() {
           <label className="mt-4 block text-sm font-medium">
             Alt text
             <input
-              className="mt-2 w-full border border-line p-2"
+              className="mt-2 min-h-11 w-full border border-line px-3 py-2"
               value={altText}
               onChange={(event) => setAltText(event.target.value)}
             />
           </label>
           <button
-            className="mt-5 w-full bg-ink px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+            className="mt-5 min-h-11 w-full bg-ink px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
             disabled={!file || busy}
           >
             {busy ? "Uploading…" : "Upload to R2"}
@@ -411,7 +411,7 @@ export default function MediaManager() {
           ) : null}
         </form>
         <div>
-          <div className="mb-4 flex items-end justify-between gap-4">
+          <div className="mb-4 flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-end sm:gap-4">
             <div>
               <h2 className="font-serif text-2xl">Registered live media</h2>
               <p className="mt-1 text-sm text-ink-soft">
@@ -419,21 +419,21 @@ export default function MediaManager() {
                 replacement controls.
               </p>
             </div>
-            <span className="text-sm text-muted">
+            <span className="shrink-0 text-sm text-muted">
               {filteredItems.length} of {items.length} item{items.length === 1 ? "" : "s"}
             </span>
           </div>
           <label className="mb-5 block text-sm font-medium">
             Search media or product
             <input
-              className="mt-2 w-full rounded-xs border border-line bg-white p-3"
+              className="mt-2 min-h-11 w-full rounded-xs border border-line bg-white p-3"
               value={mediaSearch}
               onChange={(event) => { setMediaSearch(event.target.value); setPage(1); }}
               placeholder="Search filename, title, or product"
               type="search"
             />
           </label>
-          <div className="grid gap-6 sm:grid-cols-2 2xl:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3">
             {filteredVisibleItems.map((item) => (
               <article
                 key={item.id}
@@ -473,7 +473,7 @@ export default function MediaManager() {
                     </p>
                   ))}
                   <input
-                    className="w-full border border-line p-2 text-sm"
+                    className="min-h-11 w-full border border-line px-3 py-2 text-sm"
                     defaultValue={item.title}
                     aria-label={`Title for ${item.original_filename}`}
                     onBlur={(event) => {
@@ -482,7 +482,7 @@ export default function MediaManager() {
                     }}
                   />
                   <select
-                    className="mt-2 w-full border border-line p-2 text-sm"
+                    className="mt-2 min-h-11 w-full border border-line px-3 py-2 text-sm"
                     defaultValue={item.review_status}
                     aria-label={`Review status for ${item.original_filename}`}
                     onChange={(event) =>
@@ -494,7 +494,7 @@ export default function MediaManager() {
                     <option value="rejected">Rejected</option>
                   </select>
                   <input
-                    className="mt-2 w-full border border-line p-2 text-sm"
+                    className="mt-2 min-h-11 w-full border border-line px-3 py-2 text-sm"
                     defaultValue={item.alt_text}
                     aria-label={`Alt text for ${item.original_filename}`}
                     onBlur={(event) => {
@@ -506,16 +506,16 @@ export default function MediaManager() {
                     {item.mime_type} · {Math.ceil(item.file_size_bytes / 1024)}{" "}
                     KB
                   </p>
-                  <div className="mt-4 flex flex-wrap gap-3 text-sm">
+                  <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
                     <a
-                      className="font-semibold text-gold-700 hover:underline"
+                      className="inline-flex min-h-11 items-center font-semibold text-gold-700 hover:underline"
                       href={item.public_url ?? undefined}
                       target="_blank"
                       rel="noreferrer"
                     >
                       Open full size
                     </a>
-                    <label className="cursor-pointer font-semibold text-gold-700 hover:underline">
+                    <label className="inline-flex min-h-11 cursor-pointer items-center font-semibold text-gold-700 hover:underline">
                       {replacingId === item.id
                         ? "Replacing…"
                         : "Replace image/video"}
@@ -533,7 +533,7 @@ export default function MediaManager() {
                     </label>
                   </div>
                   <button
-                    className="mt-3 block text-sm text-red-700 hover:underline"
+                    className="mt-2 inline-flex min-h-11 items-center text-sm text-red-700 hover:underline"
                     onClick={() => void remove(item.id)}
                   >
                     Delete
@@ -546,27 +546,34 @@ export default function MediaManager() {
             ) : null}
           </div>
           {filteredItems.length > 0 ? (
-            <div className="mt-6 flex items-center justify-between border-t border-line pt-4 text-sm">
-              <button
-                className="rounded-xs border border-line px-3 py-2 disabled:opacity-40"
-                disabled={page === 1}
-                onClick={() => setPage((current) => current - 1)}
-              >
-                Previous
-              </button>
-              <span className="text-muted">
+            <nav
+              className="mt-6 flex flex-col items-stretch justify-between gap-3 rounded-xs border border-line bg-cream px-4 py-3 text-sm sm:flex-row sm:items-center"
+              aria-label="Registered media pages"
+            >
+              <span className="text-ink-soft">
                 Page {page} of {filteredPageCount} · {filteredItems.length} matching
               </span>
-              <button
-                className="rounded-xs border border-line px-3 py-2 disabled:opacity-40"
-                disabled={page === filteredPageCount}
-                onClick={() => setPage((current) => current + 1)}
-              >
-                Next
-              </button>
-            </div>
+              <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center">
+                <button
+                  type="button"
+                  className="inline-flex min-h-11 items-center justify-center rounded-xs border border-line px-4 font-semibold text-gold-700 hover:border-gold-500 disabled:opacity-40"
+                  disabled={page === 1}
+                  onClick={() => setPage((current) => current - 1)}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex min-h-11 items-center justify-center rounded-xs border border-line px-4 font-semibold text-gold-700 hover:border-gold-500 disabled:opacity-40"
+                  disabled={page === filteredPageCount}
+                  onClick={() => setPage((current) => current + 1)}
+                >
+                  Next
+                </button>
+              </div>
+            </nav>
           ) : null}
-          <div className="mt-10 flex items-end justify-between gap-4">
+          <div className="mt-10 flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-end sm:gap-4">
             <div>
               <h2 className="font-serif text-2xl">Storefront assets</h2>
               <p className="mt-1 text-sm text-ink-soft">
@@ -574,7 +581,7 @@ export default function MediaManager() {
                 R2-managed assets appear above.
               </p>
             </div>
-            <span className="text-sm text-muted">
+            <span className="shrink-0 text-sm text-muted">
               {unregisteredLocalItems.length} asset
               {unregisteredLocalItems.length === 1 ? "" : "s"}
             </span>
@@ -587,7 +594,7 @@ export default function MediaManager() {
               {localError}
             </p>
           ) : null}
-          <div className="mt-4 grid gap-6 sm:grid-cols-2 2xl:grid-cols-3">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3 2xl:grid-cols-4">
             {unregisteredLocalItems.map((item) => (
               <article
                 key={item.id}
@@ -622,7 +629,7 @@ export default function MediaManager() {
                   </p>
                   <p className="mt-1 text-xs text-muted">{item.mime_type}</p>
                   <a
-                    className="mt-3 inline-block text-sm font-semibold text-gold-700 hover:underline"
+                    className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-gold-700 hover:underline"
                     href={item.public_url}
                     target="_blank"
                     rel="noreferrer"

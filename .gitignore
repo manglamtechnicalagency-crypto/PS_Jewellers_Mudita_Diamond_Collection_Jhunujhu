@@ -6,6 +6,11 @@ tsconfig.tsbuildinfo
 .DS_Store
 *.log
 
+# Local tool state, not project source.
+supabase/.temp
+test-results
+playwright-report
+
 # Secrets — credentials live here.
 # Never commit this file. See .env.example for the variable names.
 .env

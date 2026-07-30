@@ -24,18 +24,3 @@ export async function createSupabaseServerClient() {
   });
 }
 
-export async function getAdminUser() {
-  const client = await createSupabaseServerClient();
-  if (!client) return null;
-  try {
-    const { data, error } = await client.auth.getUser();
-    if (error) {
-      console.error("[supabase-server] user_lookup_failed", { errorName: error.name });
-      return null;
-    }
-    return data.user;
-  } catch (error) {
-    console.error("[supabase-server] user_lookup_failed", { errorName: error instanceof Error ? error.name : "UnknownError" });
-    return null;
-  }
-}

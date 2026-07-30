@@ -1,13 +1,14 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { AppState } from "../types";
 import BrandLogo from "./BrandLogo";
+import { NAV_LINKS } from "../lib/storefront-routes";
 
 interface HeaderProps { appState?: AppState; }
 
-const nav: [string, string][] = [
-  ["Home", "/"], ["Shop", "/shop"], ["New In", "/new-arrivals"], ["Gold", "/gold-jewellery"],
-  ["Diamond", "/diamond-jewellery"], ["Bridal", "/bridal-collection"], ["Offers", "/offers"], ["Store", "/store-locator"],
-];
+// Derived from the shared route table so a nav entry cannot point at a path the
+// router does not handle. Three of these (New In, Bridal, Offers) were dead
+// links returning a 404 body at HTTP 200.
+const nav = NAV_LINKS;
 
 export default function Header({ appState }: HeaderProps) {
   const [open, setOpen] = useState(false);
@@ -27,7 +28,7 @@ export default function Header({ appState }: HeaderProps) {
   return <>
     <header className="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-content items-center justify-between gap-4 px-4 sm:px-5 lg:h-20 lg:gap-6 lg:px-10">
-        <a className="flex shrink-0 items-center" href="/" aria-label="PS Jewellers home"><BrandLogo className="h-12 w-12 sm:h-14 sm:w-14" priority /></a>
+        <a className="flex shrink-0 items-center" href="/" aria-label="PS Jewellers — Mudita Diamonds, home"><BrandLogo className="h-14 w-auto sm:h-16" priority /></a>
         <nav className="hidden items-center gap-6 lg:flex xl:gap-7" aria-label="Primary navigation">
           {nav.map(([label, href]) => <a key={`${label}-${href}`} href={href} className="text-sm font-medium text-ink-soft transition-colors hover:text-gold-600">{label}</a>)}
         </nav>

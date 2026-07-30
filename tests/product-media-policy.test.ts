@@ -42,6 +42,18 @@ describe("validateProductMediaSelection", () => {
     assert.equal(video.message, "The video must be between 10 and 12 seconds long.");
   });
 
+  it("accepts a video whose duration could not be measured", () => {
+    // Callers that cannot decode the file (server-side uploads) omit duration.
+    // Treating that as invalid rejected every such upload outright.
+    const result = validateProductMediaSelection([{ name: "clip.mp4", type: "video/mp4", size: 1024 }]);
+    assert.equal(result.valid, true);
+  });
+
+  it("accepts avif images", () => {
+    const result = validateProductMediaSelection([{ name: "1.avif", type: "image/avif", size: 1024 }]);
+    assert.equal(result.valid, true);
+  });
+
   it("includes existing media in the five-file limit", () => {
     const result = validateProductMediaSelection(
       [{ name: "new.jpg", type: "image/jpeg", size: 1024 }],

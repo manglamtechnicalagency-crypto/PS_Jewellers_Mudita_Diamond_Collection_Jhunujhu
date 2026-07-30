@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { hasValidSameOrigin, requireAdmin } from "@/src/lib/admin-auth";
+import {
+  hasValidSameOrigin,
+  requireAdmin,
+  type AdminRole,
+} from "@/src/lib/admin-auth";
 
 const updateSchema = z
   .object({
@@ -83,7 +87,20 @@ function errorResponse(status: number, code: string, message: string) {
   );
 }
 
-async function getAdmin(request: Request) {
+/**
+ * Single origin + auth gate for the mutating handlers.
+ *
+ * `requireAdmin` costs a Supabase `getUser()` plus an MFA assurance lookup, so
+ * the allowed roles are passed in and checked once rather than gating twice
+ * (DELETE previously ran the whole round trip a second time just to narrow the
+ * role set). Callers that need a stricter role set also supply the 403 message
+ * so the wording stays specific to the operation.
+ */
+async function getAdmin(
+  request: Request,
+  allowedRoles: AdminRole[] = ["super_admin", "admin", "editor"],
+  forbiddenMessage = "You do not have permission to manage products",
+) {
   if (!hasValidSameOrigin(request))
     return {
       response: errorResponse(
@@ -92,7 +109,7 @@ async function getAdmin(request: Request) {
         "Request origin is not allowed",
       ),
     } as const;
-  const auth = await requireAdmin(["super_admin", "admin", "editor"]);
+  const auth = await requireAdmin(allowedRoles);
   if (auth.error === "not_configured")
     return {
       response: errorResponse(
@@ -119,11 +136,7 @@ async function getAdmin(request: Request) {
     } as const;
   if (auth.error === "forbidden")
     return {
-      response: errorResponse(
-        403,
-        "forbidden",
-        "You do not have permission to manage products",
-      ),
+      response: errorResponse(403, "forbidden", forbiddenMessage),
     } as const;
   return { auth } as const;
 }
@@ -434,17 +447,15 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const gate = await getAdmin(request);
+  // Delete is admin-only: editors may edit but not remove. One gate, one auth
+  // round trip.
+  const gate = await getAdmin(
+    request,
+    ["super_admin", "admin"],
+    "Only administrators can delete products",
+  );
   if ("response" in gate) return gate.response;
-  const auth = await requireAdmin(["super_admin", "admin"]);
-  if (auth.error === "forbidden")
-    return errorResponse(
-      403,
-      "forbidden",
-      "Only administrators can delete products",
-    );
-  if (auth.error !== null)
-    return errorResponse(401, "unauthorized", "Authentication is required");
+  const auth = gate.auth;
   const { id } = await params;
   if (!z.string().uuid().safeParse(id).success)
     return errorResponse(422, "validation_error", "Product id is invalid");

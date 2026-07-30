@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase/browser";
 
 type Stage = "credentials" | "totp";
@@ -199,6 +200,9 @@ export default function LoginForm() {
       >
         {pending ? "Checking…" : "Continue"}
       </button>
+      <Link href="/admin/forgot-password" className="inline-flex min-h-11 items-center justify-center text-center text-sm font-medium text-gold-600 hover:underline">
+        Forgot password?
+      </Link>
     </form>
   );
 }

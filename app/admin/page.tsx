@@ -9,8 +9,6 @@ const navigation = [
   { label: "Media Library", href: "/admin/media" },
   { label: "Catalogue settings", href: "/admin/catalogue" },
   { label: "Site settings", href: "/admin/settings" },
-  { label: "Enquiries", href: "/admin/enquiries" },
-  { label: "Audit log", href: "/admin/audit" },
 ];
 
 export const dynamic = "force-dynamic";
@@ -32,7 +30,7 @@ export default async function AdminPage() {
   const displayName = auth.displayName;
   const role = auth.role;
 
-  const [products, activeProducts, media, productMedia, enquiries, auditLogs] =
+  const [products, activeProducts, media, productMedia] =
     await Promise.all([
       client
         .from("products")
@@ -51,27 +49,18 @@ export default async function AdminPage() {
       client
         .from("product_media")
         .select("media_id", { count: "exact", head: true }),
-      client
-        .from("enquiries")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "new"),
-      client.from("audit_logs").select("id", { count: "exact", head: true }),
     ]);
   if (
     products.error ||
     activeProducts.error ||
     media.error ||
-    productMedia.error ||
-    enquiries.error ||
-    auditLogs.error
+    productMedia.error
   ) {
     console.error("[admin-dashboard] data_load_failed", {
       products: products.error?.code,
       activeProducts: activeProducts.error?.code,
       media: media.error?.code,
       productMedia: productMedia.error?.code,
-      enquiries: enquiries.error?.code,
-      auditLogs: auditLogs.error?.code,
     });
     return <AdminErrorMessage />;
   }
@@ -81,8 +70,6 @@ export default async function AdminPage() {
     ["Published", activeProducts.count ?? 0],
     ["Active media", media.count ?? 0],
     ["Product-linked media", productMedia.count ?? 0],
-    ["New enquiries", enquiries.count ?? 0],
-    ["Audit events", auditLogs.count ?? 0],
   ];
 
   return (
@@ -137,7 +124,7 @@ export default async function AdminPage() {
               </article>
             ))}
           </div>
-          <div className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="mt-8">
             <section className="rounded-xs border border-line bg-white p-6">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">
                 Next action
@@ -166,31 +153,6 @@ export default async function AdminPage() {
                   Open media library
                 </Link>
               </div>
-            </section>
-            <section className="rounded-xs border border-line bg-white p-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600">
-                System status
-              </p>
-              <ul className="mt-4 space-y-4 text-sm">
-                <li className="flex items-center justify-between">
-                  <span>Supabase database</span>
-                  <span className="font-semibold text-green-700">
-                    Connected
-                  </span>
-                </li>
-                <li className="flex items-center justify-between">
-                  <span>Catalogue</span>
-                  <span className="font-semibold text-ink-soft">
-                    {products.count ? "Populated" : "Empty"}
-                  </span>
-                </li>
-                <li className="flex items-center justify-between">
-                  <span>Media records</span>
-                  <span className="font-semibold text-ink-soft">
-                    {media.count ? "Available" : "Empty"}
-                  </span>
-                </li>
-              </ul>
             </section>
           </div>
         </section>

@@ -3,11 +3,30 @@ import { redirect } from "next/navigation";
 import LogoutButton from "../_components/LogoutButton";
 import { requireAdmin } from "@/src/lib/admin-auth";
 import ProductManager from "./ProductManager";
+import BulkOperations from "./BulkOperations";
+import BulkProductImport from "./BulkProductImport";
 import { publicObjectUrl } from "@/src/lib/r2-server";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminProductsPage() {
+const PAGE_SIZE = 25;
+
+/** ?page= is user input: accept positive integers only, anything else is page 1. */
+function parsePage(raw: string | string[] | undefined) {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (!value || !/^\d+$/.test(value)) return 1;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 1;
+}
+
+export default async function AdminProductsPage({
+  searchParams,
+}: {
+  // Next 15+ hands searchParams over as a Promise.
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const requestedPage = parsePage(resolvedSearchParams.page);
   const auth = await requireAdmin();
   if (auth.error === "not_configured")
     return <p className="p-10">Configure Supabase before using products.</p>;
@@ -23,14 +42,44 @@ export default async function AdminProductsPage() {
         Products could not be loaded right now. Please try again later.
       </p>
     );
-  const { data: products, error: productsError } = await auth.client
-    .from("products")
-    .select(
-      "id, slug, name, display_price, status, stock_quantity, updated_at",
-    )
-    .is("deleted_at", null)
-    .order("display_order")
-    .order("updated_at", { ascending: false });
+  const client = auth.client;
+  const fetchPage = (page: number) => {
+    const from = (page - 1) * PAGE_SIZE;
+    return client
+      .from("products")
+      .select(
+        "id, slug, name, display_price, status, stock_quantity, updated_at",
+        { count: "exact" },
+      )
+      .is("deleted_at", null)
+      .order("display_order")
+      .order("updated_at", { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+  };
+
+  let { data: products, error: productsError, count } = await fetchPage(requestedPage);
+  let currentPage = requestedPage;
+  let total = count ?? 0;
+  // A .range() past the last row is not an empty result — PostgREST answers 416
+  // with code PGRST103, so an out-of-range ?page= arrives here as an *error*.
+  // Guarding the clamp on `!productsError` therefore never fired, and a stale
+  // bookmark took down the whole screen with "Products could not be loaded".
+  const outOfRange =
+    productsError?.code === "PGRST103" ||
+    /range not satisfiable/i.test(productsError?.message ?? "");
+  let totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (outOfRange || (!productsError && requestedPage > totalPages)) {
+    currentPage = totalPages;
+    const retry = await fetchPage(currentPage);
+    products = retry.data;
+    productsError = retry.error;
+    // The failed first attempt may not have returned a usable count, so recompute
+    // the page total from the retry before it is handed to the pagination UI.
+    if (retry.count !== null && retry.count !== undefined) {
+      total = retry.count;
+      totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    }
+  }
   if (productsError)
     return (
       <p className="p-10">
@@ -38,9 +87,13 @@ export default async function AdminProductsPage() {
       </p>
     );
 
-  const productIds = (products ?? []).map((product) => product.id);
+  const pageProducts = products ?? [];
+  const rangeStart = total === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const rangeEnd = total === 0 ? 0 : rangeStart + pageProducts.length - 1;
+
+  const productIds = pageProducts.map((product) => product.id);
   const { data: productMedia } = productIds.length
-    ? await auth.client
+    ? await client
         .from("product_media")
         .select("product_id, role, display_order, media:media_id(storage_key, mime_type, alt_text)")
         .in("product_id", productIds)
@@ -53,7 +106,7 @@ export default async function AdminProductsPage() {
     if (link.role !== "primary" && primaryImages.has(link.product_id)) continue;
     primaryImages.set(link.product_id, { url: publicObjectUrl(String(item.storage_key)), alt: String(item.alt_text ?? "") });
   }
-  const productsWithImages = (products ?? []).map((product) => ({
+  const productsWithImages = pageProducts.map((product) => ({
     ...product,
     primary_image_url: primaryImages.get(product.id)?.url ?? null,
     primary_image_alt: primaryImages.get(product.id)?.alt ?? product.name,
@@ -72,12 +125,23 @@ export default async function AdminProductsPage() {
             </Link>
             <h1 className="mt-3 font-serif text-4xl">Products</h1>
             <p className="mt-2 text-sm text-ink-soft">
-              Create, edit, publish, archive, and synchronize catalogue records.
+              Create, edit, publish, delete, and synchronize catalogue records.
             </p>
           </div>
           <LogoutButton />
         </header>
-        <ProductManager initialProducts={productsWithImages} />
+        <ProductManager
+          initialProducts={productsWithImages}
+          pagination={{ page: currentPage, pageSize: PAGE_SIZE, total, totalPages, rangeStart, rangeEnd }}
+        />
+        {/* Only rendered for roles the bulk and import APIs actually accept —
+            a viewer would otherwise get a 403 after filling the form in. */}
+        {auth.role === "super_admin" || auth.role === "admin" || auth.role === "editor" ? (
+          <>
+            <BulkOperations products={pageProducts.map((product) => ({ id: product.id, name: product.name }))} />
+            <BulkProductImport />
+          </>
+        ) : null}
       </div>
     </main>
   );

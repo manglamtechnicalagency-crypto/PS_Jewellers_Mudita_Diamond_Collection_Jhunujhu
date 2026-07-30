@@ -4,16 +4,22 @@ import { z } from "zod";
 import { hasValidSameOrigin, requireAdmin } from "@/src/lib/admin-auth";
 import { createUploadUrl, publicObjectUrl } from "@/src/lib/r2-server";
 import { consumeUploadRateLimit, getTrustedClientKey } from "@/src/lib/upload-rate-limit";
-import { validateProductMediaSelection } from "@/src/lib/product-media-policy";
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, validateProductMediaSelection } from "@/src/lib/product-media-policy";
 
 export const runtime = "nodejs";
 
-const MAX_MEDIA_BYTES = 250 * 1024 * 1024;
+// Single source of truth: the product media policy owns every size limit. This
+// ceiling only bounds the request before the policy runs; the policy then applies
+// the tighter per-kind limit (3 MB image / 30 MB video).
+const MAX_MEDIA_BYTES = Math.max(MAX_IMAGE_BYTES, MAX_VIDEO_BYTES);
 const requestSchema = z.object({
   contentType: z.string().regex(/^(image\/(jpeg|png|webp|avif)|video\/(mp4|webm|quicktime))$/),
   fileSize: z.number().int().positive().max(MAX_MEDIA_BYTES),
   productId: z.string().uuid().optional(),
   mediaId: z.string().uuid().optional(),
+  // Measured by the browser before upload. Advisory — a caller can lie — but the
+  // size and type limits are authoritative regardless.
+  durationSeconds: z.number().positive().optional(),
 }).strict().refine((value) => !(value.productId && value.mediaId), "A new upload cannot target both a product and existing media");
 
 function errorResponse(status: number, code: string, message: string) {
@@ -37,16 +43,20 @@ export async function POST(request: Request) {
   const parsed = requestSchema.safeParse(body);
   if (!parsed.success) return errorResponse(422, "validation_error", "Media upload details are invalid");
 
+  // Runs for every upload, not just product media. A site or replacement asset
+  // that skipped this check inherited only the request ceiling above, which let a
+  // far larger file through than the policy permits.
+  let existingTypes: Array<{ type: string }> = [];
   if (parsed.data.productId) {
     const existing = await auth.client.from("product_media").select("media:media_id(mime_type)").eq("product_id", parsed.data.productId);
     if (existing.error) return errorResponse(500, "database_error", "Product media could not be checked");
-    const existingTypes = (existing.data ?? []).map((link) => {
+    existingTypes = (existing.data ?? []).map((link) => {
       const media = Array.isArray(link.media) ? link.media[0] : link.media;
       return { type: String(media?.mime_type ?? "") };
     });
-    const policy = validateProductMediaSelection([{ type: parsed.data.contentType, size: parsed.data.fileSize }], existingTypes);
-    if (!policy.valid) return errorResponse(422, "media_limit", policy.message ?? "Product media is invalid");
   }
+  const policy = validateProductMediaSelection([{ type: parsed.data.contentType, size: parsed.data.fileSize, duration: parsed.data.durationSeconds }], existingTypes);
+  if (!policy.valid) return errorResponse(422, "media_limit", policy.message ?? "Product media is invalid");
 
   let objectKey: string;
   if (parsed.data.mediaId) {

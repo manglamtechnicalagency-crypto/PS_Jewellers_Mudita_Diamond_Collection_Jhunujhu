@@ -1,13 +1,16 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command, HeadObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 /**
- * SERVER-ONLY. This file reads private R2_* environment variables and must
- * only ever be imported from files under /api — never from anything under
- * src/. Importing this in client code would either crash (env vars are
- * undefined in the browser) or, worse, leak credentials into the bundle if
- * someone "fixes" that crash by hardcoding values. Browser code must never
- * receive R2 credentials or the admin credential used by the presign route.
+ * SERVER-ONLY. This file reads private R2_* environment variables. Import it
+ * only from route handlers under app/api/ or from Server Components — never
+ * from a file carrying "use client", and never from anything reachable through
+ * a client component's import graph. Importing this in client code would either
+ * crash (env vars are undefined in the browser) or, worse, leak credentials into
+ * the bundle if someone "fixes" that crash by hardcoding values.
+ *
+ * Current server-side callers: app/api/admin/media/*, app/api/admin/products/,
+ * and the admin product Server Components (which use publicObjectUrl only).
  *
  * R2 is S3-compatible, so the AWS SDK v3 works as-is against R2's endpoint.
  */
@@ -76,21 +79,6 @@ export async function uploadObject(
 export async function deleteObject(objectKey: string): Promise<void> {
   const bucket = getEnv("R2_BUCKET_NAME");
   await getR2Client().send(new DeleteObjectCommand({ Bucket: bucket, Key: objectKey }));
-}
-
-export async function listObjects(prefix = "", continuationToken?: string) {
-  const bucket = getEnv("R2_BUCKET_NAME");
-  return getR2Client().send(new ListObjectsV2Command({
-    Bucket: bucket,
-    Prefix: prefix,
-    ContinuationToken: continuationToken,
-    MaxKeys: 100,
-  }));
-}
-
-export async function headObject(objectKey: string) {
-  const bucket = getEnv("R2_BUCKET_NAME");
-  return getR2Client().send(new HeadObjectCommand({ Bucket: bucket, Key: objectKey }));
 }
 
 export function publicObjectUrl(objectKey: string): string | null {

@@ -10,6 +10,7 @@ import {
   buildProductMetadata,
 } from "@/src/lib/seo";
 import { getPublishedCatalogue } from "@/src/lib/catalogue-server";
+import { isRenderablePath } from "@/src/lib/storefront-routes";
 import { products as developmentProducts } from "@/src/data";
 
 interface StorefrontPageProps {
@@ -43,6 +44,10 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
       </main>
     );
   }
+  // Unknown paths previously rendered the not-found page inside a 200 response —
+  // a soft 404. Crawlers treat that as a real page and index it.
+  if (!isRenderablePath(path)) notFound();
+
   const product = path.startsWith("/product/") ? catalogue?.find((item) => item.slug === path.split("/").pop()) : undefined;
   if (path.startsWith("/product/") && catalogue && !product) notFound();
   const jsonLd = product ? productJsonLd(product) : path === "/" ? organisationJsonLd() : jsonLdForRoute(path);

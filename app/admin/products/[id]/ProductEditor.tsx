@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { isProductVideo, validateProductMediaSelection } from "@/src/lib/product-media-policy";
 
 type Product = Record<string, unknown> & {
@@ -17,12 +17,31 @@ type MediaLink = Record<string, unknown> & {
   display_order: number;
 };
 type Review = Record<string, unknown> & { id: string; status: string };
+type Category = { id: string; kind: string; name: string };
 const ACCEPTED_MEDIA_TYPES = "image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime";
-const textFields = [
-  ["name", "Product name"],
+
+// Shared control styling, identical to the create form (app/admin/products/ProductForm.tsx)
+// so both screens read the same. Every control keeps min-h-11 for touch targets.
+const CONTROL_ON_CREAM = "mt-1 min-h-11 w-full border border-line bg-white p-3";
+const TEXTAREA_ON_CREAM = "mt-1 min-h-24 w-full border border-line bg-white p-3";
+const DETAILS = "rounded-xs border border-line bg-white";
+const SUMMARY = "flex min-h-11 cursor-pointer items-center px-4 py-3 font-serif text-lg";
+const DETAILS_BODY = "grid gap-4 border-t border-line bg-cream p-4 sm:grid-cols-2";
+
+function Required() {
+  return <span className="ml-2 align-middle text-[11px] font-semibold uppercase tracking-wide text-gold-700">Required</span>;
+}
+
+// Fields are grouped per section for rendering. `textFields` / `numberFields`
+// below are the unions of every group and stay the single source of truth for
+// the save() body loop — a field must live in exactly one group to be saved.
+const essentialsTextFields = [["name", "Product name"]] as const;
+const descriptionTextFields = [
   ["short_description", "Short description"],
   ["long_description", "Long description"],
   ["care_instructions", "Care instructions"],
+] as const;
+const jewelleryTextFields = [
   ["metal_type", "Metal type"],
   ["metal_purity", "Metal purity"],
   ["stone_type", "Stone type"],
@@ -32,19 +51,43 @@ const textFields = [
   ["certificate_number", "Certificate number"],
   ["hallmark_code", "Hallmark code"],
 ] as const;
-const numberFields = [
+const seoTextFields = [
+  ["seo_title", "SEO title"],
+  ["seo_description", "SEO description"],
+] as const;
+const textFields = [
+  ...essentialsTextFields,
+  ...descriptionTextFields,
+  ...jewelleryTextFields,
+  ...seoTextFields,
+] as const;
+
+const essentialsNumberFields = [["base_price", "Regular price"]] as const;
+const jewelleryNumberFields = [
   ["metal_weight_grams", "Metal weight (g)"],
   ["gross_weight_grams", "Gross weight (g)"],
   ["net_weight_grams", "Net weight (g)"],
   ["stone_carat", "Stone carat"],
   ["stone_count", "Stone count"],
-  ["base_price", "Base price"],
+] as const;
+const pricingNumberFields = [
   ["making_charges", "Making charges"],
   ["wastage_percent", "Wastage %"],
   ["gst_percent", "GST %"],
   ["discount_value", "Discount value"],
+] as const;
+const stockNumberFields = [
   ["stock_quantity", "Stock quantity"],
-  ["display_order", "Display order"],
+  ["reserved_quantity", "Reserved quantity"],
+  ["low_stock_threshold", "Low stock threshold"],
+] as const;
+const merchandisingNumberFields = [["display_order", "Display order"]] as const;
+const numberFields = [
+  ...essentialsNumberFields,
+  ...jewelleryNumberFields,
+  ...pricingNumberFields,
+  ...stockNumberFields,
+  ...merchandisingNumberFields,
 ] as const;
 const apiFieldNames: Record<string, string> = {
   short_description: "shortDescription",
@@ -71,6 +114,8 @@ const apiFieldNames: Record<string, string> = {
   gst_percent: "gstPercent",
   discount_value: "discountValue",
   stock_quantity: "stockQuantity",
+  reserved_quantity: "reservedQuantity",
+  low_stock_threshold: "lowStockThreshold",
   display_order: "displayOrder",
 };
 
@@ -109,6 +154,16 @@ export default function ProductEditor({
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewAcknowledged, setPreviewAcknowledged] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  // Category is an Essentials field on the create form, so it is editable here
+  // too. If the list fails to load the select simply stays empty and
+  // product.category_id is left untouched, so save() still sends the stored id.
+  useEffect(() => {
+    void fetch("/api/admin/taxonomy", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((payload: { data?: Category[] }) => setCategories((payload.data ?? []).filter((item) => item.kind === "category")))
+      .catch(() => undefined);
+  }, []);
   function setValue(key: string, value: unknown) {
     setProduct((current) => ({ ...current, [key]: value }));
   }
@@ -250,7 +305,7 @@ export default function ProductEditor({
       const presignResponse = await fetch("/api/admin/media/presign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contentType: newMediaFile.type, fileSize: newMediaFile.size, productId: product.id }),
+        body: JSON.stringify({ contentType: newMediaFile.type, fileSize: newMediaFile.size, productId: product.id, ...(duration === undefined ? {} : { durationSeconds: duration }) }),
       });
       const presign = (await presignResponse.json()) as { uploadUrl?: string; objectKey?: string; error?: { message?: string } };
       if (!presignResponse.ok || !presign.uploadUrl || !presign.objectKey) throw new Error(presign.error?.message ?? "Image upload could not be prepared");
@@ -331,79 +386,94 @@ export default function ProductEditor({
     ).startsWith("video/"),
   ).length;
 
+  function renderTextField([key, label]: readonly [string, string], multiline = false) {
+    return (
+      <label key={key} className={`text-sm font-medium ${multiline ? "sm:col-span-2" : ""}`}>
+        {label}
+        {multiline ? (
+          <textarea
+            className={TEXTAREA_ON_CREAM}
+            value={String(product[key] ?? "")}
+            onChange={(event) => setValue(key, event.target.value)}
+          />
+        ) : (
+          <input
+            className={CONTROL_ON_CREAM}
+            value={String(product[key] ?? "")}
+            onChange={(event) => setValue(key, event.target.value)}
+          />
+        )}
+      </label>
+    );
+  }
+  function renderNumberField([key, label]: readonly [string, string]) {
+    return (
+      <label key={key} className="text-sm font-medium">
+        {label}
+        <input
+          className={CONTROL_ON_CREAM}
+          type="number"
+          step="0.01"
+          min="0"
+          value={product[key] === null || product[key] === undefined ? "" : String(product[key])}
+          onChange={(event) => setValue(key, numberOrNull(event.target.value))}
+        />
+      </label>
+    );
+  }
+  function renderCsvField(key: string, label: string, hint: string) {
+    return (
+      <label className="text-sm font-medium sm:col-span-2">
+        {label} <span className="font-normal text-muted">({hint})</span>
+        <input
+          className={CONTROL_ON_CREAM}
+          value={csv(product[key])}
+          onChange={(event) => setValue(key, event.target.value)}
+        />
+      </label>
+    );
+  }
+  function renderFlag(key: string, label: string) {
+    return (
+      <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
+        <input
+          type="checkbox"
+          checked={Boolean(product[key])}
+          onChange={(event) => setValue(key, event.target.checked)}
+        />
+        {label}
+      </label>
+    );
+  }
+
   return (
     <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_340px]">
       <form onSubmit={save} className="grid gap-6">
-        <section className="grid gap-4 rounded-xs border border-line bg-white p-6 sm:grid-cols-2">
-          <h2 className="font-serif text-2xl sm:col-span-2">
-            Identity and description
-          </h2>
-          {textFields.map(([key, label]) => (
-            <label
-              key={key}
-              className={`text-sm font-medium ${key.includes("description") ? "sm:col-span-2" : ""}`}
-            >
-              {label}
-              {key.includes("description") ? (
-                <textarea
-                  className="mt-1 min-h-24 w-full border border-line p-3"
-                  value={String(product[key] ?? "")}
-                  onChange={(event) => setValue(key, event.target.value)}
-                />
-              ) : (
-                <input
-                  className="mt-1 w-full border border-line p-3"
-                  value={String(product[key] ?? "")}
-                  onChange={(event) => setValue(key, event.target.value)}
-                />
-              )}
-            </label>
-          ))}
+        {/* Essentials — always visible. Everything below this block is optional and collapsed. */}
+        <section className="grid gap-4 rounded-xs border border-line bg-cream p-4 sm:grid-cols-2">
+          <h2 className="font-serif text-2xl sm:col-span-2">Essentials</h2>
+          {essentialsTextFields.map((field) => renderTextField(field))}
           <label className="text-sm font-medium">
-            Status
+            Category
+            <Required />
             <select
-              className="mt-1 w-full border border-line p-3"
-              value={String(product.status ?? "draft")}
-              onChange={(event) => setValue("status", event.target.value)}
+              className={CONTROL_ON_CREAM}
+              value={String(product.category_id ?? "")}
+              onChange={(event) => setValue("category_id", event.target.value)}
             >
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-              <option value="archived">Archived</option>
+              <option value="">Select</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
             </select>
-          </label>
-          <label className="text-sm font-medium">
-            Stock status
-            <select
-              className="mt-1 w-full border border-line p-3"
-              value={String(product.stock_status ?? "in_stock")}
-              onChange={(event) => setValue("stock_status", event.target.value)}
-            >
-              <option value="in_stock">In stock</option>
-              <option value="low_stock">Low stock</option>
-              <option value="out_of_stock">Out of stock</option>
-              <option value="made_to_order">Made to order</option>
-            </select>
-          </label>
-        </section>
-        <section className="grid gap-4 rounded-xs border border-line bg-white p-6 sm:grid-cols-2">
-          <h2 className="font-serif text-2xl sm:col-span-2">
-            Pricing and offers
-          </h2>
-          <label className="flex items-center gap-3 text-sm font-medium sm:col-span-2">
-            <input
-              type="checkbox"
-              checked={Boolean(product.discount_type)}
-              onChange={(event) => {
-                setValue("discount_type", event.target.checked ? "percentage" : null);
-                if (!event.target.checked) setValue("discount_value", 0);
-              }}
-            />
-            Offer enabled
           </label>
           <label className="text-sm font-medium">
             Pricing mode
+            <Required />
             <select
-              className="mt-1 w-full border border-line p-3"
+              className={CONTROL_ON_CREAM}
               value={String(product.price_mode)}
               onChange={(event) => setValue("price_mode", event.target.value)}
             >
@@ -413,50 +483,145 @@ export default function ProductEditor({
             </select>
           </label>
           <label className="text-sm font-medium">
-            Discount type
-            <select
-              className="mt-1 w-full border border-line p-3"
-              value={String(product.discount_type ?? "")}
-              onChange={(event) =>
-                setValue("discount_type", event.target.value || null)
-              }
-            >
-              <option value="">None</option>
-              <option value="flat">Flat</option>
-              <option value="percentage">Percentage</option>
-            </select>
+            Regular price
+            {product.price_mode === "fixed" ? (
+              <Required />
+            ) : (
+              <span className="ml-2 text-xs font-normal text-muted">(not needed for price on request)</span>
+            )}
+            <input
+              className={CONTROL_ON_CREAM}
+              type="number"
+              step="0.01"
+              min="0"
+              value={product.base_price === null || product.base_price === undefined ? "" : String(product.base_price)}
+              onChange={(event) => setValue("base_price", numberOrNull(event.target.value))}
+            />
           </label>
-          {numberFields.map(([key, label]) => (
-            <label key={key} className="text-sm font-medium">
-              {label}
-              <input
-                className="mt-1 w-full border border-line p-3"
-                type="number"
-                step="0.01"
-                min="0"
-                value={
-                  product[key] === null || product[key] === undefined
-                    ? ""
-                    : String(product[key])
-                }
-                onChange={(event) =>
-                  setValue(key, numberOrNull(event.target.value))
-                }
-              />
-            </label>
-          ))}
-          <div className="rounded-xs bg-cream p-4 text-sm sm:col-span-2">
-            {product.price_mode === "on_request" || product.price_on_request
-              ? "Price on request — enquiry CTA is shown publicly."
-              : pricing?.is_priceable === false
-                ? "Missing weight or metal rate — public price safely falls back to enquiry."
-                : pricing?.total
-                  ? `₹${Number(pricing.total).toLocaleString("en-IN")} · live calculation`
-                  : product.display_price
-                    ? `₹${Number(product.display_price).toLocaleString("en-IN")}`
-                    : "Save to calculate"}
-          </div>
+          <label className="text-sm font-medium sm:col-span-2">
+            Publishing status
+            <select
+              className={CONTROL_ON_CREAM}
+              value={String(product.status ?? "draft")}
+              onChange={(event) => setValue("status", event.target.value)}
+            >
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
+            </select>
+            <span className="mt-1 block text-xs font-normal text-muted">
+              Published products need a primary image and a description, otherwise they do not appear on the website.
+            </span>
+          </label>
+          <p className="text-sm text-ink-soft sm:col-span-2">
+            Photos<Required />
+            <span className="ml-2">
+              {mediaLinks.length} linked media item{mediaLinks.length === 1 ? "" : "s"} · {primaryCount} primary.
+            </span>{" "}
+            <a className="font-semibold text-gold-700 hover:underline" href="#product-media">
+              Manage photos and video →
+            </a>
+          </p>
         </section>
+
+        <details className={DETAILS}>
+          <summary className={SUMMARY}>Description — short and long text, care instructions (optional)</summary>
+          <div className={DETAILS_BODY}>
+            {descriptionTextFields.map((field) => renderTextField(field, true))}
+          </div>
+        </details>
+
+        <details className={DETAILS}>
+          <summary className={SUMMARY}>Jewellery details — metal, stones, certification (optional)</summary>
+          <div className={DETAILS_BODY}>
+            {jewelleryTextFields.map((field) => renderTextField(field))}
+            {jewelleryNumberFields.map((field) => renderNumberField(field))}
+          </div>
+        </details>
+
+        <details className={DETAILS}>
+          <summary className={SUMMARY}>Pricing details — making charges, wastage, GST, offer (optional)</summary>
+          <div className={DETAILS_BODY}>
+            <label className="flex min-h-11 items-center gap-3 text-sm font-medium sm:col-span-2">
+              <input
+                type="checkbox"
+                checked={Boolean(product.discount_type)}
+                onChange={(event) => {
+                  setValue("discount_type", event.target.checked ? "percentage" : null);
+                  if (!event.target.checked) setValue("discount_value", 0);
+                }}
+              />
+              Offer enabled
+            </label>
+            <label className="text-sm font-medium">
+              Discount type
+              <select
+                className={CONTROL_ON_CREAM}
+                value={String(product.discount_type ?? "")}
+                onChange={(event) =>
+                  setValue("discount_type", event.target.value || null)
+                }
+              >
+                <option value="">None</option>
+                <option value="flat">Flat</option>
+                <option value="percentage">Percentage</option>
+              </select>
+            </label>
+            {pricingNumberFields.map((field) => renderNumberField(field))}
+          </div>
+        </details>
+
+        <details className={DETAILS}>
+          <summary className={SUMMARY}>Stock — quantity and availability (optional)</summary>
+          <div className={DETAILS_BODY}>
+            {stockNumberFields.map((field) => renderNumberField(field))}
+            <label className="text-sm font-medium">
+              Stock status
+              <select
+                className={CONTROL_ON_CREAM}
+                value={String(product.stock_status ?? "in_stock")}
+                onChange={(event) => setValue("stock_status", event.target.value)}
+              >
+                <option value="in_stock">In stock</option>
+                <option value="low_stock">Low stock</option>
+                <option value="out_of_stock">Out of stock</option>
+                <option value="made_to_order">Made to order</option>
+              </select>
+            </label>
+          </div>
+        </details>
+
+        <details className={DETAILS}>
+          <summary className={SUMMARY}>SEO — search listing, tags, sizes (optional)</summary>
+          <div className={DETAILS_BODY}>
+            {seoTextFields.map((field) => renderTextField(field, field[0] === "seo_description"))}
+            {renderCsvField("seo_keywords", "SEO keywords", "comma separated")}
+            {renderCsvField("tags", "Tags", "comma separated")}
+            {renderCsvField("size_options", "Size options", "comma separated")}
+          </div>
+        </details>
+
+        <details className={DETAILS}>
+          <summary className={SUMMARY}>Merchandising — highlights and ordering (optional)</summary>
+          <div className={DETAILS_BODY}>
+            {renderFlag("is_featured", "Featured")}
+            {renderFlag("is_new_arrival", "New arrival")}
+            {renderFlag("is_best_seller", "Best seller")}
+            {merchandisingNumberFields.map((field) => renderNumberField(field))}
+          </div>
+        </details>
+
+        <div className="rounded-xs border border-line bg-cream p-4 text-sm" role="status">
+          {product.price_mode === "on_request" || product.price_on_request
+            ? "Price on request — enquiry CTA is shown publicly."
+            : pricing?.is_priceable === false
+              ? "Missing weight or metal rate — public price safely falls back to enquiry."
+              : pricing?.total
+                ? `₹${Number(pricing.total).toLocaleString("en-IN")} · live calculation`
+                : product.display_price
+                  ? `₹${Number(product.display_price).toLocaleString("en-IN")}`
+                  : "Save to calculate"}
+        </div>
         {previewOpen ? (
           <section className="rounded-xs border border-gold-300 bg-cream p-5 sm:col-span-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-gold-700">
@@ -488,7 +653,7 @@ export default function ProductEditor({
           </section>
         ) : null}
         <button
-          className="w-fit bg-ink px-6 py-3 text-sm font-semibold text-white disabled:opacity-50"
+          className="min-h-11 w-fit bg-ink px-6 py-3 text-sm font-semibold text-white disabled:opacity-50"
           disabled={saving}
         >
           {saving ? "Saving…" : "Save product and recalculate price"}
@@ -500,7 +665,7 @@ export default function ProductEditor({
         ) : null}
       </form>
       <aside className="space-y-6">
-        <section className="rounded-xs border border-line bg-white p-6">
+        <section id="product-media" className="rounded-xs border border-line bg-white p-6">
           <h2 className="font-serif text-2xl">Media checklist</h2>
           <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
             <div className="rounded-xs bg-cream p-2">

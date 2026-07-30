@@ -40,10 +40,6 @@ function upstashConfig() {
   return url && token ? { url: url.replace(/\/$/, ""), token } : null;
 }
 
-export function isDurableRateLimiterConfigured(): boolean {
-  return upstashConfig() !== null;
-}
-
 export interface ClientKeyResult {
   key: string | null;
   /** True when the platform supplied a trustworthy client identifier. */
@@ -104,7 +100,12 @@ function consumeInMemory(clientKey: string): RateLimitResult {
 async function consumeUpstash(clientKey: string, config: { url: string; token: string }): Promise<RateLimitResult> {
   const { windowMs, maxRequests } = getConfig();
   const windowSeconds = Math.ceil(windowMs / 1_000);
-  const redisKey = `r2-presign:${clientKey}`;
+  // Namespace for this limiter's buckets. The only caller is
+  // /api/admin/media/presign (the old /api/r2-presign route is gone), so the
+  // prefix matches that. Changing this string starts every client on a fresh
+  // counter: in-flight buckets under the previous prefix are orphaned and
+  // expire on their own TTL, so callers briefly get a full new allowance.
+  const redisKey = `media-presign:${clientKey}`;
 
   const response = await fetch(`${config.url}/pipeline`, {
     method: "POST",

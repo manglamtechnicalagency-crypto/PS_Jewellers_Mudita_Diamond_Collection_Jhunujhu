@@ -3,6 +3,10 @@
   "private": true,
   "version": "2.0.0",
   "type": "module",
+  "//sideEffects": "Lets the bundler drop unused exports. HomePage and ProductCard import small helpers from src/data.ts; without this the whole ~46 KB seed catalogue rides along into the client bundle. CSS is listed so stylesheet imports are never dropped.",
+  "sideEffects": [
+    "*.css"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -13,7 +17,8 @@
     "test:browser": "playwright test",
     "test:browser:install": "playwright install chromium",
     "review:local": "npm run type-check && npm run test && npm run build",
-    "verify": "npm run type-check && npm run test && npm run build"
+    "verify": "npm run type-check && npm run test && npm run build",
+    "doctor": "npx react-doctor@latest"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.850.0",
