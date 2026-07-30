@@ -21,6 +21,7 @@ export default function LoginForm() {
   const [challengeId, setChallengeId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [needsEnrollment, setNeedsEnrollment] = useState(false);
 
   async function resetSession(message: string) {
     const client = createSupabaseBrowserClient();
@@ -36,6 +37,7 @@ export default function LoginForm() {
   async function submitCredentials(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setNeedsEnrollment(false);
     setPending(true);
 
     const client = createSupabaseBrowserClient();
@@ -65,7 +67,11 @@ export default function LoginForm() {
 
       const totp = factors?.totp?.find((factor) => factor.status === "verified");
       if (!totp) {
-        await resetSession("This account must complete TOTP enrollment before it can access the admin panel.");
+        // Dead end without a route out: the account cannot sign in, and the
+        // enrollment page is the only way to fix it. Flag it so the UI can
+        // offer the link instead of leaving the operator stuck.
+        setNeedsEnrollment(true);
+        await resetSession("This account has no authenticator app set up yet. Two-factor is required for admin access.");
         return;
       }
 
@@ -167,6 +173,20 @@ export default function LoginForm() {
 
   return (
     <form className="mt-8 flex flex-col gap-4" onSubmit={submitCredentials}>
+      {/* Local dev skips the TOTP challenge entirely, which means the sign-in
+          you test here is NOT the one production runs. That gap is easy to
+          forget and hard to spot, so it is stated on screen rather than left
+          buried in an env var. */}
+      {mfaBypassed ? (
+        <p
+          role="status"
+          className="rounded-xs border border-amber-300 bg-amber-50 p-3 text-sm leading-5 text-amber-900"
+        >
+          <strong>Two-factor is bypassed in this environment.</strong> This is not the production sign-in flow —
+          production always demands an authenticator code and cannot be bypassed. Test the real path on a deployed
+          build.
+        </p>
+      ) : null}
       <label className="flex flex-col gap-1 text-sm font-medium">
         Email
         <input
@@ -193,6 +213,14 @@ export default function LoginForm() {
         <p role="alert" className="text-sm text-error">
           {error}
         </p>
+      ) : null}
+      {needsEnrollment ? (
+        <Link
+          href="/admin/enroll-mfa"
+          className="inline-flex min-h-11 items-center justify-center rounded-xs border border-gold-500 px-4 text-center text-sm font-semibold text-gold-600 transition-colors hover:bg-gold-500 hover:text-white"
+        >
+          Set up an authenticator app
+        </Link>
       ) : null}
       <button
         disabled={pending}
