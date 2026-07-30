@@ -181,7 +181,6 @@ export default function EnrollMfaForm() {
         {qrCode ? (
           // Supabase returns the QR as an SVG data URI. Rendered with <img> so
           // the markup is never injected into the page.
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={qrCode}
             alt="QR code for enrolling this account in your authenticator app"

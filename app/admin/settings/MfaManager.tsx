@@ -334,7 +334,6 @@ export default function MfaManager() {
           {qrCode ? (
             // Supabase returns the QR as an SVG data URI. Rendered via <img> so
             // the markup is never injected into the page.
-            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={qrCode}
               alt="QR code to add this account to your authenticator app"
