@@ -28,7 +28,7 @@ export default function BrandLogo({ className = "h-12 w-12", priority = false }:
       height={275}
       className={`object-contain ${className}`}
       priority={priority}
-      sizes="(max-width: 1024px) 64px, 80px"
+      sizes="(max-width: 1024px) 80px, 96px"
     />
   );
 }

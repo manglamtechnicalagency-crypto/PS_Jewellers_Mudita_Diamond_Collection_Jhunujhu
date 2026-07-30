@@ -89,7 +89,7 @@ export default async function AdminPage() {
         <aside className="border-b border-line bg-white px-6 py-6 lg:min-h-screen lg:w-64 lg:border-b-0 lg:border-r">
           <div className="flex items-center justify-between lg:block">
             <div>
-              <BrandLogo className="h-20 w-20" priority />
+              <BrandLogo className="h-24 w-auto" priority />
               <p className="mt-2 font-serif text-2xl">Control panel</p>
             </div>
             <LogoutButton />
@@ -179,7 +179,7 @@ function AdminSetupMessage() {
   return (
     <main className="min-h-screen bg-cream px-5 py-16">
       <div className="mx-auto max-w-xl rounded-xs border border-line bg-white p-8">
-        <BrandLogo className="h-24 w-24" priority />
+        <BrandLogo className="h-28 w-auto" priority />
         <h1 className="mt-3 font-serif text-4xl">Admin setup required</h1>
         <p className="mt-4 text-sm leading-6 text-ink-soft">
           The admin panel is server-protected, but Supabase is not configured in
@@ -196,7 +196,7 @@ function AdminErrorMessage() {
   return (
     <main className="min-h-screen bg-cream px-5 py-16">
       <div className="mx-auto max-w-xl rounded-xs border border-line bg-white p-8">
-        <BrandLogo className="h-24 w-24" priority />
+        <BrandLogo className="h-28 w-auto" priority />
         <h1 className="mt-3 font-serif text-4xl">Admin data unavailable</h1>
         <p className="mt-4 text-sm leading-6 text-ink-soft">
           We could not load the admin data right now. Check the Supabase

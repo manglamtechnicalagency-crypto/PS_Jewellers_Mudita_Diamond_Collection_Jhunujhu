@@ -20,7 +20,7 @@ export default function EnrollMfaPage() {
   return (
     <main className="min-h-screen bg-cream px-5 py-16 text-ink">
       <div className="mx-auto max-w-md rounded-xs border border-line bg-white p-8 shadow-sm">
-        <BrandLogo className="h-24 w-24" priority />
+        <BrandLogo className="h-28 w-auto" priority />
         <h1 className="mt-3 font-serif text-4xl">Set up two-factor</h1>
         <p className="mt-2 text-sm leading-6 text-ink-soft">
           Admin access requires an authenticator app. Use this once, on an account that does not have one yet. If your

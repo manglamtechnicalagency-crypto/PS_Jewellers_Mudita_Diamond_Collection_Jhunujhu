@@ -8,7 +8,7 @@ export default function Footer() {
       <div className="mx-auto max-w-content px-4 py-12 sm:px-5 sm:py-16 lg:px-10">
         <div className="flex flex-col gap-6 border-b border-line pb-10 sm:pb-12">
           <div>
-            <BrandLogo className="h-20 w-20" />
+            <BrandLogo className="h-24 w-auto" />
             <h2 className="mt-2 font-serif text-3xl text-ink sm:text-4xl lg:text-5xl">Luxury you can trust.</h2>
           </div>
         </div>

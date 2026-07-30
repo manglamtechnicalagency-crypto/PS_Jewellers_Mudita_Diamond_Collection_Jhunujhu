@@ -150,7 +150,7 @@ export default function IdleLock({ displayName }: { displayName: string }) {
     >
       <div className="flex min-h-full items-center justify-center px-4 py-6 sm:px-5 sm:py-10">
       <div ref={dialogRef} className="w-full max-w-sm rounded-xs border border-line bg-white p-6 shadow-elevated sm:p-8">
-        <BrandLogo className="h-12 w-12 sm:h-16 sm:w-16" />
+        <BrandLogo className="h-16 w-auto sm:h-20" />
         <h2 className="mt-3 font-serif text-2xl sm:mt-4 sm:text-3xl">Screen locked</h2>
         <p className="mt-2 text-sm text-ink-soft">
           {displayName ? `Signed in as ${displayName}. ` : ""}Enter your 6-digit PIN to continue.

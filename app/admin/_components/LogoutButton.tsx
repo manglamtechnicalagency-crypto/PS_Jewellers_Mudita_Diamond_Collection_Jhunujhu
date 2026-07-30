@@ -23,5 +23,5 @@ export default function LogoutButton() {
     }
   }
 
-  return <div className="flex items-center gap-3"><BrandLogo className="h-10 w-10" /><button onClick={logout} disabled={pending} className="text-sm text-ink-soft hover:text-gold-600 disabled:opacity-50">{pending ? "Logging out…" : "Log out"}</button>{error ? <span role="alert" className="text-xs text-red-700">Logout failed</span> : null}</div>;
+  return <div className="flex items-center gap-3"><BrandLogo className="h-12 w-auto" /><button onClick={logout} disabled={pending} className="text-sm text-ink-soft hover:text-gold-600 disabled:opacity-50">{pending ? "Logging out…" : "Log out"}</button>{error ? <span role="alert" className="text-xs text-red-700">Logout failed</span> : null}</div>;
 }
