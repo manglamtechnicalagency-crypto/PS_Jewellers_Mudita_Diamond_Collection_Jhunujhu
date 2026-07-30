@@ -6,7 +6,6 @@ import Image from "next/image";
 export type SimplePageType =
   | "tracking"
   | "store"
-  | "appointment"
   | "about"
   | "contact"
   | "faq"
@@ -23,7 +22,6 @@ interface SimplePageProps {
 const copy: Record<SimplePageType, [string, string]> = {
   tracking: ["Order Tracking", "Reserved a piece? Call or WhatsApp the showroom with your reservation reference and we will confirm its status."],
   store: ["Store Locator", "PS Jewellers, Jhunjhunu, Rajasthan. Visit the showroom for bridal consultation, gold jewellery and diamond collections."],
-  appointment: ["Book Appointment", "Reserve a private jewellery consultation for bridal sets, diamond rings, or gold investment pieces."],
   about: ["About PS Jewellers", "PS Jewellers serves Jhunjhunu with BIS hallmarked gold, certified diamonds and handcrafted 925 silver. Every piece is photographed in our own studio and listed with its weight and hallmarking."],
   contact: ["Contact", "Speak with PS Jewellers for product enquiries, appointments and showroom visits in Jhunjhunu."],
   faq: ["FAQ", "Common questions about hallmarking, pricing, reservations, exchange and certification."],

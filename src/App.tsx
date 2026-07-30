@@ -27,8 +27,6 @@ const defaultHomepageSettings: HomepageSettings = {
     "BIS hallmarked gold, certified diamonds and handcrafted 925 silver, from our Jhunjhunu showroom.",
   primaryCtaLabel: "Shop Collection",
   primaryCtaHref: "/shop",
-  secondaryCtaLabel: "Book Appointment",
-  secondaryCtaHref: "/book-appointment",
 };
 
 function normalizePath(pathname: string): string {

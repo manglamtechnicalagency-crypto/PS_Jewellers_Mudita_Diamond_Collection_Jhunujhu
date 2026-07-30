@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import LogoutButton from "./_components/LogoutButton";
+import MarketRatesWidget, { type MarketRatesInitial } from "./_components/MarketRatesWidget";
+import { getMarketRates } from "@/src/lib/metal-market-rates-server";
 import { requireAdmin } from "@/src/lib/admin-auth";
 import BrandLogo from "@/src/components/BrandLogo";
 
@@ -30,7 +32,11 @@ export default async function AdminPage() {
   const displayName = auth.displayName;
   const role = auth.role;
 
-  const [products, activeProducts, media, productMedia] =
+  // Market rates ride along in the same Promise.all so the upstream latency
+  // overlaps the Supabase counts instead of stacking on top of them. Its
+  // failure must never gate the dashboard, so it is handled separately below
+  // rather than joining the error check.
+  const [products, activeProducts, media, productMedia, marketRates] =
     await Promise.all([
       client
         .from("products")
@@ -49,7 +55,12 @@ export default async function AdminPage() {
       client
         .from("product_media")
         .select("media_id", { count: "exact", head: true }),
+      getMarketRates(),
     ]);
+
+  const initialMarketRates: MarketRatesInitial = marketRates.ok
+    ? { ok: true, payload: marketRates.payload }
+    : { ok: false, message: marketRates.message };
   if (
     products.error ||
     activeProducts.error ||
@@ -123,6 +134,9 @@ export default async function AdminPage() {
                 <p className="mt-3 font-serif text-3xl">{value}</p>
               </article>
             ))}
+          </div>
+          <div className="mt-8">
+            <MarketRatesWidget initial={initialMarketRates} />
           </div>
           <div className="mt-8">
             <section className="rounded-xs border border-line bg-white p-6">
