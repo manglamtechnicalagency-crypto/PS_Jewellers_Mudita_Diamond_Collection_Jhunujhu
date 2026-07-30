@@ -204,7 +204,7 @@ export default function ProductPage({ product, appState, catalogue = [] }: Produ
             </div>
 
             <div className="mt-8 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
-              <WhatsAppButton product={product} label="💬 Enquire on WhatsApp" className="col-span-2 min-h-12 px-8 sm:col-span-1" />
+              <WhatsAppButton product={product} label="Enquire on WhatsApp" className="col-span-2 min-h-12 px-8 sm:col-span-1" />
             </div>
 
             <div className="mt-10 grid grid-cols-4 gap-3 border-t border-line pt-8 sm:gap-4">
