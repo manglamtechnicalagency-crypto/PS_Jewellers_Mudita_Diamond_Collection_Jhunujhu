@@ -82,10 +82,6 @@ export const STATIC_ROUTE_META: Record<string, StaticRouteMeta> = {
     title: "Store Locator",
     description: "Visit PS Jewellers at Oriental Tower Road No. 1, Shop No. 1, Jhunjhunu, Rajasthan.",
   },
-  "/book-appointment": {
-    title: "Book an Appointment",
-    description: "Reserve a bridal styling or jewellery consultation at the PS Jewellers Jhunjhunu showroom.",
-  },
   "/about": { title: "About Us", description: "The story behind PS Jewellers, Jhunjhunu." },
   "/blog": { title: "Jewellery Guides", description: "Buying guides on hallmarking, diamond certification and bridal styling." },
   "/contact": { title: "Contact", description: "Contact PS Jewellers for enquiries, appointments and showroom visits." },

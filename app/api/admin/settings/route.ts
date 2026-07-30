@@ -8,8 +8,6 @@ const homepageSchema = z.object({
   heroDescription: z.string().trim().min(1).max(500),
   primaryCtaLabel: z.string().trim().min(1).max(60),
   primaryCtaHref: z.string().trim().regex(/^\/[a-z0-9/_-]*$/),
-  secondaryCtaLabel: z.string().trim().min(1).max(60),
-  secondaryCtaHref: z.string().trim().regex(/^\/[a-z0-9/_-]*$/),
 }).strict();
 
 function errorResponse(status: number, code: string, message: string) {

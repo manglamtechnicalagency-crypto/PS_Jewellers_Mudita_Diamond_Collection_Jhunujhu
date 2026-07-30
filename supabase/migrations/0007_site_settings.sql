@@ -21,7 +21,7 @@ create trigger site_settings_audit after insert or update or delete on public.si
 insert into public.site_settings (setting_key, value, is_public)
 values (
   'homepage',
-  '{"heroEyebrow":"PS Jewellers · Jhunjhunu","heroTitle":"Luxury jewellery crafted for life''s finest occasions.","heroDescription":"BIS hallmarked gold, certified diamonds and handcrafted 925 silver, from our Jhunjhunu showroom.","primaryCtaLabel":"Shop Collection","primaryCtaHref":"/shop","secondaryCtaLabel":"Book Appointment","secondaryCtaHref":"/book-appointment"}'::jsonb,
+  '{"heroEyebrow":"PS Jewellers · Jhunjhunu","heroTitle":"Luxury jewellery crafted for life''s finest occasions.","heroDescription":"BIS hallmarked gold, certified diamonds and handcrafted 925 silver, from our Jhunjhunu showroom.","primaryCtaLabel":"Shop Collection","primaryCtaHref":"/shop"}'::jsonb,
   true
 )
 on conflict (setting_key) do nothing;

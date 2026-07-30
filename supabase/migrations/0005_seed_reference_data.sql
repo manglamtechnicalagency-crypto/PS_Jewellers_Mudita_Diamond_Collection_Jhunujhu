@@ -93,7 +93,6 @@ insert into public.pages (page_key, title, status, seo_title, seo_description) v
   ('contact',          'Contact',             'published', 'Contact PS Jewellers',                     'Enquiries, appointments and showroom visits.'),
   ('faq',              'FAQ',                 'published', 'Frequently Asked Questions',               'Hallmarking, certification, delivery and exchange questions answered.'),
   ('store-locator',    'Store Locator',       'published', 'Store Locator',                            'Visit the PS Jewellers showroom in Jhunjhunu, Rajasthan.'),
-  ('book-appointment', 'Book an Appointment', 'published', 'Book an Appointment',                      'Reserve a bridal styling or jewellery consultation.'),
   ('privacy-policy',   'Privacy Policy',      'published', 'Privacy Policy',                           'How PS Jewellers handles your information.'),
   ('terms',            'Terms',               'published', 'Terms and Conditions',                     'Terms for using the PS Jewellers website.'),
   ('return-policy',    'Return Policy',       'published', 'Return Policy',                            'Exchange and return terms.')

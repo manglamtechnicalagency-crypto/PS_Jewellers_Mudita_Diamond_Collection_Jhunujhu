@@ -103,7 +103,7 @@ Never commit `.env`, `.env.local`, service-role keys, R2 secrets, or access toke
 
 Category routes: `/gold-jewellery`, `/diamond-jewellery`, `/silver-jewellery`, `/bridal-collection`, `/rings`, `/necklaces`, `/earrings`, `/bangles`, `/bracelets`, `/chains`, `/pendants`, `/mangalsutra`, `/maang-tikka`, `/nose-pin`, `/anklets`, `/new-arrivals`, `/best-sellers`, `/offers`
 
-Content routes: `/about`, `/contact`, `/faq`, `/blog`, `/store-locator`, `/book-appointment`, `/order-tracking`, `/account`, `/privacy-policy`, `/terms`, `/return-policy`
+Content routes: `/about`, `/contact`, `/faq`, `/blog`, `/store-locator`, `/order-tracking`, `/account`, `/privacy-policy`, `/terms`, `/return-policy`
 
 Generated: `/sitemap.xml`, `/robots.txt`
 

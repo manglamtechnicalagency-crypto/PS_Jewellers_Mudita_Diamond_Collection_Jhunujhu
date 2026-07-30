@@ -75,7 +75,6 @@ export const CATALOGUE_ROUTES: CatalogueRoute[] = [
 export const SIMPLE_ROUTES: Record<string, SimplePageType> = {
   "/order-tracking": "tracking",
   "/store-locator": "store",
-  "/book-appointment": "appointment",
   "/about": "about",
   "/blog": "blog",
   "/journal": "blog",

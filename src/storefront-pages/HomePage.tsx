@@ -73,12 +73,6 @@ export default function HomePage({ appState, settings, products }: HomePageProps
               >
                 {settings.primaryCtaLabel}
               </a>
-              <a
-                href={settings.secondaryCtaHref}
-                className="inline-flex min-h-12 w-full items-center justify-center rounded-xs border border-white/60 px-8 text-sm font-semibold text-white transition-colors hover:bg-white hover:text-ink sm:w-auto"
-              >
-                {settings.secondaryCtaLabel}
-              </a>
             </div>
           </div>
         </div>
@@ -231,17 +225,14 @@ export default function HomePage({ appState, settings, products }: HomePageProps
       <section className="bg-ink py-12 sm:py-16">
         <div className="mx-auto flex max-w-content flex-col items-center gap-6 px-4 text-center sm:px-5 lg:px-10">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gold-300">Store locator · Book appointment</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-gold-300">Store locator</p>
             <h2 className="mt-2 font-serif text-2xl leading-snug text-white sm:text-4xl">
-              Visit PS Jewellers in Jhunjhunu or reserve a bridal styling consultation.
+              Visit PS Jewellers in Jhunjhunu for a bridal styling consultation.
             </h2>
           </div>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:gap-4">
             <a href="/store-locator" className="inline-flex min-h-12 items-center justify-center rounded-xs border border-white/60 px-6 text-sm font-semibold text-white hover:bg-white hover:text-ink">
               Find Store
-            </a>
-            <a href="/book-appointment" className="inline-flex min-h-12 items-center justify-center rounded-xs bg-gold-500 px-6 text-sm font-semibold text-white hover:bg-gold-600">
-              Book Appointment
             </a>
           </div>
         </div>
