@@ -40,7 +40,7 @@ export default async function ProductEditorPage({
     auth.client
       .from("product_reviews")
       .select(
-        "id, author_name, rating, title, body, status, is_verified_purchase, created_at, moderation_note",
+        "id, author_name, author_email, rating, title, body, status, is_verified_purchase, created_at, moderation_note",
       )
       .eq("product_id", id)
       .order("created_at", { ascending: false }),

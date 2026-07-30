@@ -790,7 +790,18 @@ export default function ProductEditor({
                     {String(review.rating)} ★
                   </span>
                 </div>
-                <p className="mt-1 text-ink-soft">{String(review.body)}</p>
+                {review.author_email ? (
+                  <a
+                    className="text-xs text-muted hover:text-gold-600"
+                    href={`mailto:${String(review.author_email)}`}
+                  >
+                    {String(review.author_email)}
+                  </a>
+                ) : null}
+                {review.title ? (
+                  <strong className="mt-1 block">{String(review.title)}</strong>
+                ) : null}
+                <p className="mt-1 whitespace-pre-line text-ink-soft">{String(review.body)}</p>
                 <div className="mt-2 flex justify-between gap-2">
                   <span className="text-xs uppercase text-muted">
                     {review.status}

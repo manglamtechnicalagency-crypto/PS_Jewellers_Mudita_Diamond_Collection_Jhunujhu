@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import SiteLayout from "../components/SiteLayout";
 import ProductCard from "../components/ProductCard";
 import WhatsAppButton from "../components/WhatsAppButton";
+import ProductReviews from "../components/ProductReviews";
 import { categoryToPath, formatPrice, trustItems } from "../data";
 import type { AppState, Product } from "../types";
 import Image from "next/image";
@@ -269,6 +270,15 @@ export default function ProductPage({ product, appState, catalogue = [] }: Produ
         </ul>
       </section>
 
+      {/* Directly below the long description, as requested. Fetches its own
+          approved reviews: the storefront router is a client component, so
+          there is no server render to pass them down from. */}
+      <ProductReviews
+        productId={product.id}
+        ratingAverage={product.rating}
+        ratingCount={product.reviewsCount}
+      />
+
       <section className="border-y border-line bg-cream py-10">
         <div className="mx-auto grid max-w-content grid-cols-2 gap-5 px-4 sm:grid-cols-4 sm:gap-6 sm:px-5 lg:px-10">
           {trustItems.map((item) => (
@@ -281,26 +291,6 @@ export default function ProductPage({ product, appState, catalogue = [] }: Produ
           ))}
         </div>
       </section>
-
-      {product.reviews.length > 0 ? (
-        <section className="mx-auto max-w-content px-4 py-12 sm:px-5 sm:py-16 lg:px-10">
-          <h2 className="font-serif text-xl text-ink sm:text-2xl">
-            Customer Reviews
-          </h2>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 sm:gap-6">
-            {product.reviews.map((review) => (
-              <article
-                key={review.name}
-                className="rounded-xs border border-line bg-white p-6"
-              >
-                <p className="italic text-ink-soft">“{review.comment}”</p>
-                <strong className="mt-3 block text-ink">{review.name}</strong>
-                <span className="text-sm text-gold-600">{review.rating} ★</span>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
 
       {related.length > 0 ? (
         <section className="mx-auto max-w-content px-4 py-12 sm:px-5 sm:py-16 lg:px-10">
