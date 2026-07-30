@@ -19,6 +19,21 @@ export const SHOWROOM = {
   mapsUrl: "https://maps.app.goo.gl/u6Cqf7fED4WPxboV7",
 } as const;
 
+/**
+ * Social profiles.
+ *
+ * The URL is stored without the `?igsh=...` parameter that Instagram appends to
+ * shared links. That token identifies the share it came from, not the profile —
+ * baking it into every page would send Instagram a referral signal on behalf of
+ * every visitor, and it can expire.
+ */
+export const SOCIAL = {
+  instagram: {
+    handle: "ps_jewellersjjn",
+    url: "https://www.instagram.com/ps_jewellersjjn",
+  },
+} as const;
+
 /** Single-line address, for aria labels and structured data. */
 export const SHOWROOM_ADDRESS = SHOWROOM.addressLines.join(", ");
 

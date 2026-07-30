@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import InstagramIcon from "./InstagramIcon";
 import {
   SHOWROOM,
   SHOWROOM_ADDRESS,
   SHOWROOM_DIRECTIONS_URL,
   SHOWROOM_EMBED_URL,
+  SOCIAL,
 } from "../../config/contact";
 
 /**
@@ -105,6 +107,16 @@ export function StoreDetails({ className = "" }: { className?: string }) {
         </a>
         <a className="text-ink-soft hover:text-gold-600" href={`mailto:${SHOWROOM.email}`}>
           {SHOWROOM.email}
+        </a>
+        <a
+          className="inline-flex min-h-11 items-center gap-2 text-ink-soft hover:text-gold-600"
+          href={SOCIAL.instagram.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`PS Jewellers on Instagram, @${SOCIAL.instagram.handle} (opens in a new tab)`}
+        >
+          <InstagramIcon />
+          <span>@{SOCIAL.instagram.handle}</span>
         </a>
       </div>
       <div className="mt-5 flex flex-wrap gap-3">

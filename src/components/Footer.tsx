@@ -1,6 +1,7 @@
 import BrandLogo from "./BrandLogo";
 import StoreMap from "./StoreMap";
-import { SHOWROOM, SHOWROOM_DIRECTIONS_URL, WHATSAPP_NUMBER } from "../../config/contact";
+import InstagramIcon from "./InstagramIcon";
+import { SHOWROOM, SHOWROOM_DIRECTIONS_URL, SOCIAL, WHATSAPP_NUMBER } from "../../config/contact";
 
 export default function Footer() {
   return (
@@ -53,12 +54,24 @@ export default function Footer() {
             >
               Get directions →
             </a>
+            {/* rel="noopener" is required with target="_blank": without it the
+                opened tab gets a handle on this window via window.opener. */}
+            <a
+              className="mt-1 inline-flex min-h-11 items-center gap-2 text-sm text-ink-soft hover:text-gold-600"
+              href={SOCIAL.instagram.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`PS Jewellers on Instagram, @${SOCIAL.instagram.handle} (opens in a new tab)`}
+            >
+              <InstagramIcon />
+              <span>@{SOCIAL.instagram.handle}</span>
+            </a>
           </div>
         </div>
 
         <div className="flex flex-col gap-3 border-t border-line pt-6 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
           <span>© 2026 PS Jewellers. Developed by Manglam Technical Agency.</span>
-          <span className="flex gap-3">
+          <span className="flex items-center gap-3">
             <a className="hover:text-gold-600" href="/privacy-policy">Privacy</a>
             <span aria-hidden="true">·</span>
             <a className="hover:text-gold-600" href="/terms">Terms</a>
