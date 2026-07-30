@@ -237,23 +237,36 @@ export async function DELETE(request: Request) {
     .single();
   if (lookupError || !media)
     return errorResponse(404, "not_found", "Media was not found");
+  // Fetch the product names, not just a count. "Unlink this from its product"
+  // is useless advice if the admin cannot tell which of 17 products it means —
+  // they end up opening each one in turn.
   const { data: links, error: linksError } = await auth.client
     .from("product_media")
-    .select("product_id")
+    .select("product_id, products(name)")
     .eq("media_id", media.id)
-    .limit(1);
+    .limit(5);
   if (linksError)
     return errorResponse(
       500,
       "database_error",
       "Media links could not be checked",
     );
-  if (links?.length)
+  if (links?.length) {
+    const names = links
+      .map((link) => {
+        const product = (link as { products?: { name?: string } | { name?: string }[] }).products;
+        const entry = Array.isArray(product) ? product[0] : product;
+        return entry?.name;
+      })
+      .filter((name): name is string => Boolean(name));
     return errorResponse(
       409,
       "media_in_use",
-      "Unlink this media from its product before deleting it",
+      names.length
+        ? `This image is still used by ${names.join(", ")}. Remove it from that product first, then delete it here.`
+        : "This image is still linked to a product. Remove it from that product first, then delete it here.",
     );
+  }
   const { error } = await auth.client
     .from("media")
     .update({

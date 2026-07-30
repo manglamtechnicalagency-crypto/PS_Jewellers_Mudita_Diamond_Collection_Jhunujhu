@@ -78,6 +78,10 @@ export default function MediaManager() {
   const [replacingId, setReplacingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [message, setMessage] = useState("");
+  // Per-tile delete errors. A single shared message line cannot say which
+  // of twenty tiles failed, and it renders in the upload panel far above.
+  const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({});
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function load() {
     const response = await fetch("/api/admin/media", { cache: "no-store" });
@@ -263,19 +267,58 @@ export default function MediaManager() {
 
   async function remove(id: string) {
     if (!window.confirm("Delete this media from the live catalogue?")) return;
-    const response = await fetch("/api/admin/media", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
+    setDeleteErrors((current) => {
+      const next = { ...current };
+      delete next[id];
+      return next;
     });
-    if (response.ok) {
-      setItems((current) => current.filter((item) => item.id !== id));
-      await syncD1();
-    } else
-      setMessage(
-        ((await response.json()) as { error?: { message?: string } }).error
-          ?.message ?? "Media could not be deleted.",
-      );
+    setDeletingId(id);
+    try {
+      const response = await fetch("/api/admin/media", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: { code?: string; message?: string } }
+        | null;
+
+      if (response.ok) {
+        setItems((current) => current.filter((item) => item.id !== id));
+        await syncD1();
+        return;
+      }
+
+      // 503 storage_cleanup_pending means the database row WAS archived and
+      // only the R2 object delete failed. Treating that as a total failure left
+      // the tile on screen for a record that no longer exists, so the next
+      // attempt returned "Media was not found" and the admin was stuck. Drop
+      // the tile and report the real, narrower problem.
+      if (response.status === 503 && payload?.error?.code === "storage_cleanup_pending") {
+        setItems((current) => current.filter((item) => item.id !== id));
+        setMessage(
+          "Media removed from the catalogue, but the file could not be deleted from R2. The record is archived; the stored file needs manual cleanup.",
+        );
+        await syncD1();
+        return;
+      }
+
+      // Anything else: show it on the tile the admin just clicked. The shared
+      // message line lives in the upload panel at the top of the page, so a
+      // failure on a tile further down was reported entirely off-screen — which
+      // is why deleting looked like it silently did nothing.
+      setDeleteErrors((current) => ({
+        ...current,
+        [id]: payload?.error?.message ?? "This media could not be deleted.",
+      }));
+    } catch {
+      setDeleteErrors((current) => ({
+        ...current,
+        [id]: "Delete failed. Check your connection and try again.",
+      }));
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   async function edit(
@@ -533,11 +576,20 @@ export default function MediaManager() {
                     </label>
                   </div>
                   <button
-                    className="mt-2 inline-flex min-h-11 items-center text-sm text-red-700 hover:underline"
+                    className="mt-2 inline-flex min-h-11 items-center text-sm text-red-700 hover:underline disabled:opacity-50"
                     onClick={() => void remove(item.id)}
+                    disabled={deletingId === item.id}
                   >
-                    Delete
+                    {deletingId === item.id ? "Deleting…" : "Delete"}
                   </button>
+                  {deleteErrors[item.id] ? (
+                    <p
+                      role="alert"
+                      className="mt-2 rounded-xs border border-red-200 bg-red-50 p-2 text-xs leading-5 text-red-800"
+                    >
+                      {deleteErrors[item.id]}
+                    </p>
+                  ) : null}
                 </div>
               </article>
             ))}
