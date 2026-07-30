@@ -177,12 +177,9 @@ export default function ProductEditor({
       );
       return;
     }
-    const shortDescription = String(product.short_description ?? "").trim();
-    const longDescription = String(product.long_description ?? "").trim();
-    if (product.status === "published" && !shortDescription && !longDescription) {
-      setMessage("Add a short description or long description before publishing.");
-      return;
-    }
+    // Descriptions are no longer required to publish, by request. The publish
+    // preview still shows what will go live, so the operator can see an empty
+    // description before confirming rather than being stopped by the form.
     if (product.status === "published" && !mediaLinks.some((item) => item.role === "primary" && String((item.media as Record<string, unknown> | null)?.mime_type ?? "").startsWith("image/"))) {
       setMessage("Add one approved primary image before publishing.");
       return;
