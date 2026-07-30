@@ -1,5 +1,7 @@
 import SiteLayout from "../components/SiteLayout";
+import StoreMap, { StoreDetails } from "../components/StoreMap";
 import { blogPosts, trustItems } from "../data";
+import { SHOWROOM_HOURS } from "../../config/contact";
 import type { AppState } from "../types";
 import Image from "next/image";
 
@@ -21,7 +23,7 @@ interface SimplePageProps {
 
 const copy: Record<SimplePageType, [string, string]> = {
   tracking: ["Order Tracking", "Reserved a piece? Call or WhatsApp the showroom with your reservation reference and we will confirm its status."],
-  store: ["Store Locator", "PS Jewellers, Jhunjhunu, Rajasthan. Visit the showroom for bridal consultation, gold jewellery and diamond collections."],
+  store: ["Store Locator", "Find PS Jewellers on Oriental Tower, Road No. 1, Jhunjhunu. Open the map below for directions, or call ahead to reserve a bridal consultation."],
   about: ["About PS Jewellers", "PS Jewellers serves Jhunjhunu with BIS hallmarked gold, certified diamonds and handcrafted 925 silver. Every piece is photographed in our own studio and listed with its weight and hallmarking."],
   contact: ["Contact", "Speak with PS Jewellers for product enquiries, appointments and showroom visits in Jhunjhunu."],
   faq: ["FAQ", "Common questions about hallmarking, pricing, reservations, exchange and certification."],
@@ -43,6 +45,32 @@ export default function SimplePage({ appState, type }: SimplePageProps) {
           <p className="mt-2 text-sm text-ink-soft sm:text-base">{text}</p>
         </div>
       </section>
+
+      {type === "store" || type === "contact" ? (
+        <section className="mx-auto max-w-content px-5 py-12 lg:px-10">
+          <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-start">
+            <StoreMap />
+            <div>
+              <StoreDetails />
+              {/* Renders only when hours are configured — see config/contact.ts.
+                  Guessed hours would send customers to a closed shutter. */}
+              {SHOWROOM_HOURS.length > 0 ? (
+                <div className="mt-6 border-t border-line pt-5">
+                  <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">Opening hours</h2>
+                  <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
+                    {SHOWROOM_HOURS.map((entry) => (
+                      <div key={entry.days} className="contents">
+                        <dt className="text-ink-soft">{entry.days}</dt>
+                        <dd className="text-right tabular-nums text-ink">{entry.hours}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {type === "blog" ? (
         <section className="mx-auto max-w-content px-5 py-12 lg:px-10">

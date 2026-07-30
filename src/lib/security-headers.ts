@@ -41,6 +41,25 @@ export function imageSources(): string[] {
   return [...sources];
 }
 
+/**
+ * Origins that may be framed BY this site.
+ *
+ * Only the Google Maps showroom embed. This is the one deliberate relaxation of
+ * `frame-src 'none'`, and it is narrow on purpose: two exact Google origins, no
+ * wildcard, nothing else.
+ *
+ * Note this is the opposite direction to `frame-ancestors 'none'` and the
+ * `X-Frame-Options: DENY` header, which stop anyone framing *us*. Those are
+ * unchanged — this site still cannot be embedded, which is what protects the
+ * admin panel from clickjacking.
+ *
+ * The map is click-to-load (see src/components/StoreMap.tsx), so no Google
+ * frame is created until a visitor asks for one.
+ */
+export function frameSources(): string[] {
+  return ["'self'", "https://www.google.com", "https://maps.google.com"];
+}
+
 /** Origins video elements may load from, derived from environment. */
 export function mediaSources(): string[] {
   const sources = new Set<string>(["'self'", "blob:"]);
@@ -88,7 +107,7 @@ export function buildContentSecurityPolicy({ nonce, isDevelopment = false }: Csp
     `font-src 'self' data:`,
     `connect-src ${connectSources().join(" ")}`,
     `form-action 'self'`,
-    `frame-src 'none'`,
+    `frame-src ${frameSources().join(" ")}`,
     `worker-src 'self' blob:`,
     `manifest-src 'self'`,
   ];

@@ -1,4 +1,6 @@
 import BrandLogo from "./BrandLogo";
+import StoreMap from "./StoreMap";
+import { SHOWROOM, SHOWROOM_DIRECTIONS_URL, WHATSAPP_NUMBER } from "../../config/contact";
 
 export default function Footer() {
   return (
@@ -27,15 +29,29 @@ export default function Footer() {
           <div className="flex flex-col gap-3">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">Visit</p>
             <address className="not-italic text-sm leading-6 text-ink-soft">
-              Oriental Tower Road No. 1, Shop No. 1
-              <br />
-              Jhunjhunu, Rajasthan
+              {SHOWROOM.addressLines.map((line) => (
+                <span key={line} className="block">
+                  {line}
+                </span>
+              ))}
             </address>
-            <a className="text-sm text-ink-soft hover:text-gold-600" href="https://wa.me/919829407255">
-              WhatsApp: 9829407255
+            <a className="text-sm text-ink-soft hover:text-gold-600" href={`https://wa.me/${WHATSAPP_NUMBER}`}>
+              WhatsApp: {SHOWROOM.phone}
             </a>
-            <a className="text-sm text-ink-soft hover:text-gold-600" href="mailto:subhashsoni334@gmail.com">
-              subhashsoni334@gmail.com
+            <a className="text-sm text-ink-soft hover:text-gold-600" href={`mailto:${SHOWROOM.email}`}>
+              {SHOWROOM.email}
+            </a>
+            {/* Click-to-load: no Google frame is requested on any page until a
+                visitor taps it. An always-on embed here would load Google on
+                every page of the site. */}
+            <StoreMap className="mt-2 aspect-[3/2]" compact />
+            <a
+              className="text-sm text-ink-soft hover:text-gold-600"
+              href={SHOWROOM_DIRECTIONS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Get directions →
             </a>
           </div>
         </div>

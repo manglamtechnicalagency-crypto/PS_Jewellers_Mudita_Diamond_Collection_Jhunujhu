@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
-import { buildContentSecurityPolicy, connectSources, imageSources, mediaSources } from "../src/lib/security-headers.ts";
+import { buildContentSecurityPolicy, connectSources, frameSources, imageSources, mediaSources } from "../src/lib/security-headers.ts";
 
 const originalEnv = { ...process.env };
 
@@ -70,5 +70,34 @@ describe("buildContentSecurityPolicy", () => {
     assert.ok(policy.includes("object-src 'none'"));
     assert.ok(policy.includes("base-uri 'self'"));
     assert.ok(policy.includes("form-action 'self'"));
+  });
+});
+
+describe("frameSources", () => {
+  it("allows only the two exact Google Maps origins, never a wildcard", () => {
+    const sources = frameSources();
+    assert.deepEqual(sources, ["'self'", "https://www.google.com", "https://maps.google.com"]);
+    assert.ok(!sources.some((source) => source.includes("*")), "a wildcard would widen this far beyond the map embed");
+  });
+});
+
+describe("frame directives", () => {
+  it("permits the Google Maps embed via frame-src", () => {
+    const policy = buildContentSecurityPolicy({ nonce: "abc" });
+    const frameSrc = directive(policy, "frame-src");
+    assert.ok(frameSrc.includes("https://www.google.com"), "the showroom map embed would be blocked");
+    assert.ok(!frameSrc.includes("'none'"), "frame-src none and an allowlist cannot coexist");
+  });
+
+  it("still refuses to let this site be framed by anyone", () => {
+    // frame-src (what we may embed) must never be confused with frame-ancestors
+    // (who may embed us). Relaxing the first must not relax the second, or the
+    // admin panel becomes clickjackable.
+    const policy = buildContentSecurityPolicy({ nonce: "abc" });
+    assert.ok(policy.includes("frame-ancestors 'none'"), "frame-ancestors must stay locked down");
+  });
+
+  it("keeps object-src locked down alongside the frame allowlist", () => {
+    assert.ok(buildContentSecurityPolicy().includes("object-src 'none'"));
   });
 });
