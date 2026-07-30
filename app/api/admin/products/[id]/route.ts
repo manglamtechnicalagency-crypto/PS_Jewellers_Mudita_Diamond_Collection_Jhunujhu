@@ -335,8 +335,21 @@ export async function PATCH(
         : "Product could not be updated",
     );
   }
+  // "Price on request" must never be recalculated away.
+  //
+  // The conditions below are almost all "did the client send this field?", and
+  // the product editor sends every one of them on every save. So this block ran
+  // even when the operator had just chosen on_request, and the branch inside it
+  // writes `price_on_request: false` unconditionally — silently undoing the
+  // `price_on_request: true` written moments earlier in the same request. The
+  // admin UI then reported "pricing recalculated live" and the storefront kept
+  // showing a price.
+  //
+  // An explicit on_request choice is a decision, not a missing input, so it
+  // wins over the calculator.
   if (
-    product.priceMode === "fixed" ||
+    product.priceMode !== "on_request" &&
+    (product.priceMode === "fixed" ||
     product.priceMode === "weight_based" ||
     product.basePrice !== undefined ||
     product.metalType !== undefined ||
@@ -346,7 +359,7 @@ export async function PATCH(
     product.wastagePercent !== undefined ||
     product.gstPercent !== undefined ||
     product.discountType !== undefined ||
-    product.discountValue !== undefined
+    product.discountValue !== undefined)
   ) {
     const { data: rawCalculation } = await gate.auth.client
       .rpc("calculate_product_price", { product_id: id })
