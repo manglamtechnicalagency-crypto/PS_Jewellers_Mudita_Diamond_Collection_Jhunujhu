@@ -301,15 +301,32 @@ export async function PATCH(
     .select(productSelect)
     .single();
   if (isMissingCareInstructionsColumn(error)) {
+    // The column is absent on databases that have not run
+    // 0017_product_care_instructions.sql. Retrying with the same payload was a
+    // no-op bug: `care_instructions` had to come out of the WRITE too, not just
+    // the projection, or Postgres rejects it identically every time. The admin
+    // editor always sends the field (even as ""), so without this every product
+    // save on such a database fails with a bare "Product could not be updated".
+    const { care_instructions: _omitted, ...updateWithoutCare } = update as Record<string, unknown>;
+    void _omitted;
     ({ data: updated, error } = await gate.auth.client
       .from("products")
-      .update(update)
+      .update(updateWithoutCare)
       .eq("id", id)
       .is("deleted_at", null)
       .select(productSelectWithoutCare)
       .single());
   }
-  if (error)
+  if (error) {
+    // Without this the real cause never reaches anyone: the client is told
+    // "Product could not be updated" by design, and nothing was logged, so the
+    // failure was undiagnosable even with server logs. Codes only — no row data.
+    console.error("[admin-products] update_failed", {
+      productId: id,
+      code: error.code,
+      // PostgREST puts the offending column in `message`; useful and not sensitive.
+      message: error.message,
+    });
     return errorResponse(
       error.code === "23505" ? 409 : 500,
       error.code === "23505" ? "duplicate_product" : "database_error",
@@ -317,6 +334,7 @@ export async function PATCH(
         ? "SKU or slug already exists"
         : "Product could not be updated",
     );
+  }
   if (
     product.priceMode === "fixed" ||
     product.priceMode === "weight_based" ||

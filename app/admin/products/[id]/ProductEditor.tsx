@@ -656,7 +656,7 @@ export default function ProductEditor({
           className="min-h-11 w-fit bg-ink px-6 py-3 text-sm font-semibold text-white disabled:opacity-50"
           disabled={saving}
         >
-          {saving ? "Saving…" : "Save product and recalculate price"}
+          {saving ? "Saving…" : "Save Product"}
         </button>
         {message ? (
           <p className="text-sm text-ink-soft" role="status">
