@@ -160,7 +160,19 @@ export async function PATCH(
       bodyResult.reason === "too_large" ? "Request body is too large" : "Request body must be valid JSON",
     );
   }
-  const parsed = updateSchema.safeParse(bodyResult.value);
+  // These values are derived by the database pricing trigger and are returned
+  // by the product read model. Older edit screens could echo them back on
+  // save; never pass them to the atomic update function, which intentionally
+  // rejects client-controlled derived columns.
+  const requestValue =
+    bodyResult.value && typeof bodyResult.value === "object" && !Array.isArray(bodyResult.value)
+      ? Object.fromEntries(
+          Object.entries(bodyResult.value as Record<string, unknown>).filter(
+            ([key]) => !["display_price", "price_on_request", "updated_at", "created_at"].includes(key),
+          ),
+        )
+      : bodyResult.value;
+  const parsed = updateSchema.safeParse(requestValue);
   if (!parsed.success)
     return errorResponse(422, "validation_error", parsed.error.issues[0]?.message ?? "Product fields are invalid");
   const product = parsed.data;
