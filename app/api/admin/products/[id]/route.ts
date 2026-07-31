@@ -303,9 +303,9 @@ export async function PATCH(
       ? {}
       : { seo_keywords: product.seoKeywords }),
     ...(product.status === undefined ? {} : { status: product.status }),
-    ...(product.priceMode === "on_request"
-      ? { price_on_request: true, display_price: null }
-      : {}),
+    // `display_price` and `price_on_request` are derived by
+    // `save_product_atomic`; never send those database-owned columns in the
+    // client patch, including when switching to price-on-request.
   };
   const { data: updated, error } = await gate.auth.client
     .rpc("save_product_atomic", { p_product_id: id, p_update: update })
