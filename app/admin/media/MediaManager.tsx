@@ -217,41 +217,12 @@ export default function MediaManager() {
     setReplacingId(item.id);
     setMessage("");
     try {
-      const presignResponse = await fetch("/api/admin/media/presign", {
+      const form = new FormData();
+      form.set("mediaId", item.id);
+      form.set("file", replacement);
+      const updateResponse = await fetch("/api/admin/media/replace", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mediaId: item.id,
-          contentType: replacement.type,
-          fileSize: replacement.size,
-        }),
-      });
-      const presign = (await presignResponse.json()) as {
-        uploadUrl?: string;
-        objectKey?: string;
-        error?: { message: string };
-      };
-      if (!presignResponse.ok || !presign.uploadUrl || !presign.objectKey)
-        throw new Error(
-          presign.error?.message ?? "Replacement URL could not be created",
-        );
-      const uploadResponse = await fetch(presign.uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": replacement.type },
-        body: replacement,
-      });
-      if (!uploadResponse.ok)
-        throw new Error("Cloudflare R2 replacement failed");
-      const updateResponse = await fetch("/api/admin/media", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: item.id,
-          storageKey: presign.objectKey,
-          originalFilename: replacement.name,
-          mimeType: replacement.type,
-          fileSizeBytes: replacement.size,
-        }),
+        body: form,
       });
       const updated = (await updateResponse.json()) as {
         error?: { message: string };
