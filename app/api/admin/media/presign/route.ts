@@ -19,7 +19,8 @@ const requestSchema = z.object({
   fileSize: z.number().int().positive().max(MAX_MEDIA_BYTES),
   productId: z.string().uuid().optional(),
   mediaId: z.string().uuid().optional(),
-  sectionKey: z.string().regex(/^[a-z0-9-]+$/).max(80).optional(),
+  // Site section keys are namespaced (for example `home.hero.video`).
+  sectionKey: z.string().regex(/^[a-z0-9.-]+$/).max(80).optional(),
   // Measured by the browser before upload. Advisory — a caller can lie — but the
   // size and type limits are authoritative regardless.
   durationSeconds: z.number().positive().optional(),
