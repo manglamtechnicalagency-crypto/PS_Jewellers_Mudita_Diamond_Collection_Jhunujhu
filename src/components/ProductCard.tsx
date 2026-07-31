@@ -10,12 +10,28 @@ interface ProductCardProps {
   compact?: boolean;
 }
 
+/**
+ * The NEW badge is owned by `isNewArrival`, not by badge copy. Badge text is
+ * editorial and an editor could type "New Arrival" on a piece that is not
+ * flagged — which is how the New Arrivals rail and the badge used to disagree.
+ * When the flag is set it wins; otherwise any stale "new" wording is dropped.
+ */
+const STALE_NEW_BADGES = new Set(["new", "new in", "new arrival", "new arrivals", "just in"]);
+
+function badgeText(product: Product): string {
+  if (product.isNewArrival) return "New";
+  // Only exact newness claims are suppressed on an unflagged product. Matching
+  // /\bnew\b/ would also strip legitimate copy such as "New Season".
+  return STALE_NEW_BADGES.has(product.badge.trim().toLowerCase()) ? "" : product.badge;
+}
+
 export default function ProductCard({ product, compact = false }: ProductCardProps) {
+  const badge = badgeText(product);
   return (
     <article className="group flex flex-col overflow-hidden rounded-xs border border-line bg-white shadow-card transition-shadow hover:shadow-elevated">
       <a className="relative block aspect-square overflow-hidden bg-cream" href={`/product/${product.slug}`}>
         <Image src={product.image} alt={product.name} fill sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 320px" className="object-cover transition-transform duration-700 ease-out group-hover:scale-105" />
-        {product.badge ? <span className="absolute left-2 top-2 rounded-full bg-ink/90 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white sm:left-3 sm:top-3 sm:px-3 sm:py-1 sm:text-[11px]">{product.badge}</span> : null}
+        {badge ? <span className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white sm:left-3 sm:top-3 sm:px-3 sm:py-1 sm:text-[11px] ${product.isNewArrival ? "bg-gold-600" : "bg-ink/90"}`}>{badge}</span> : null}
       </a>
 
       <div className={`flex flex-1 flex-col gap-2 p-3 sm:p-4 ${compact ? "sm:p-3" : ""}`}>

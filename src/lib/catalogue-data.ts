@@ -1,10 +1,24 @@
-import type { Product } from "../types";
+import { isJewelleryCategory, type JewelleryCategory, type Product } from "../types";
 
 interface CatalogueRow { [key: string]: unknown; }
 interface MediaLink { product_id: string; role: string; media: CatalogueRow | CatalogueRow[] | null; }
 
 const text = (value: unknown, fallback = "") => typeof value === "string" ? value : fallback;
 const number = (value: unknown, fallback = 0) => typeof value === "number" ? value : Number(value ?? fallback);
+
+/**
+ * Passes the stored classification through unchanged, or returns "" when the
+ * row predates migration 0021 and has not been backfilled.
+ *
+ * It deliberately does NOT fall back to metal_purity or the product name. A
+ * guessed category is exactly the production defect being fixed: an
+ * unclassified product is simply absent from category pages, which is visible
+ * and correctable, rather than silently filed under the wrong metal.
+ */
+const jewelleryCategory = (value: unknown): JewelleryCategory | "" => {
+  const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
+  return isJewelleryCategory(normalized) ? normalized : "";
+};
 
 export function buildCatalogueProducts(rows: CatalogueRow[], links: MediaLink[]): Product[] {
   const mediaByProduct = new Map<string, Array<{ url: string; mimeType: string }>>();
@@ -23,7 +37,13 @@ export function buildCatalogueProducts(rows: CatalogueRow[], links: MediaLink[])
     const images = media.filter((item) => item.mimeType.startsWith("image/")).map((item) => item.url);
     const price = number(row.base_price ?? row.display_price);
     return {
-      id: text(row.id), slug: text(row.slug), name: text(row.name), category: text(row.category_name, "Jewellery"), collection: text(row.collection_name), sku: text(row.sku),
+      id: text(row.id), slug: text(row.slug), name: text(row.name), category: text(row.category_name, "Jewellery"),
+      jewelleryCategory: jewelleryCategory(row.jewellery_category),
+      isNewArrival: Boolean(row.is_new_arrival),
+      // publish_at is the publication timestamp; created_at is the fallback for
+      // rows published before scheduling existed.
+      publishedAt: text(row.publish_at) || text(row.created_at),
+      collection: text(row.collection_name), sku: text(row.sku),
       price, offerPrice: number(row.display_price ?? row.base_price), discount: row.discount_value ? text(row.discount_value) : "", availability: text(row.stock_status, "In Stock"),
       hallmark: text(row.hallmark_code), certification: text(row.certification), purity: text(row.metal_purity), weight: row.net_weight_grams ? `${row.net_weight_grams} g` : "", stoneType: text(row.stone_type), occasion: "Everyday",
       image: images[0] ?? "", video: media.find((item) => item.mimeType.startsWith("video/"))?.url, images, rating: number(row.rating_average), reviewsCount: number(row.rating_count),

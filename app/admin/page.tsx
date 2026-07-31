@@ -166,6 +166,12 @@ export default async function AdminPage() {
                 >
                   Open media library
                 </Link>
+                <Link
+                  href="/admin/media-gallery"
+                  className="rounded-xs border border-line px-4 py-3 text-sm font-semibold text-ink hover:border-gold-500"
+                >
+                  Website images
+                </Link>
               </div>
             </section>
           </div>

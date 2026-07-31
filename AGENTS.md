@@ -2,13 +2,16 @@
 
 This project uses the ECC Codex workflow from `affaan-m/ECC`.
 
-## Project surface
+## Current project surface (authoritative, 2026-07-31)
 
 - Next.js App Router + React 19 + TypeScript strict mode + Tailwind CSS.
 - Client code lives in `src/`.
-- Vercel serverless routes live in `api/`.
+- Next.js App Router routes and server handlers live in `app/`; deployment target is Vercel.
 - R2 credentials are server-only. Never place them in `NEXT_PUBLIC_` variables or client bundles.
-- `src/data.ts` is the current catalogue source; Supabase, Sanity, and R2 integrations remain opt-in scaffolding unless a task explicitly wires them.
+- Supabase/Postgres is the production catalogue, settings, enquiry, media-metadata, and admin data source. `src/data.ts` is development fallback only.
+- Cloudflare R2 buckets are configured as `ps-jewellers` (clean media) and `ps-jewellers-quarantine-prod` (private quarantine).
+- Supabase migrations are applied and synchronized through `0023`; the obsolete `appointments` table is intentionally absent.
+- Production URL: `https://ps-jewellers-mudita-diamond-collect.vercel.app`.
 
 ## Required workflow
 
@@ -17,7 +20,8 @@ This project uses the ECC Codex workflow from `affaan-m/ECC`.
 3. Validate all API boundary input, authentication, authorization, size limits, and error responses.
 4. Never hardcode secrets. Update `.env.example` when adding environment variables.
 5. Run `npm run type-check` and `npm run build` after changes.
-6. Review the final diff for secrets, unrelated changes, and generated files.
+6. For database changes, add an ordered Supabase migration and run `npx supabase migration list` plus `npx supabase db push` against the linked project.
+7. Review the final diff for secrets, unrelated changes, and generated files.
 
 ## Project commands
 
@@ -26,6 +30,8 @@ npm install
 npm run dev
 npm run type-check
 npm run build
+npx supabase migration list
+npx supabase db push
 ```
 
 ECC skills are available under `.agents/skills/`. Use `verification-loop` for release checks, `security-review` for API or credential changes, and `frontend-patterns` for React UI work.

@@ -226,6 +226,10 @@ export default function ProductEditor({
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean);
+    // Sent only when set. The PATCH schema treats an omitted field as
+    // "unchanged", so saving media or flags never clears the classification,
+    // and setting the classification never touches the New Arrival flag.
+    if (product.jewellery_category) body.jewelleryCategory = String(product.jewellery_category);
     body.isFeatured = Boolean(product.is_featured);
     body.isNewArrival = Boolean(product.is_new_arrival);
     body.isBestSeller = Boolean(product.is_best_seller);
@@ -465,6 +469,30 @@ export default function ProductEditor({
                 </option>
               ))}
             </select>
+          </label>
+          {/*
+            Primary merchandising class — decides which collection page this
+            product appears on. Independent of the jewellery type above and of
+            metal purity: a diamond piece set in 18K gold is "Diamond".
+          */}
+          <label className="text-sm font-medium">
+            Jewellery category
+            <Required />
+            <select
+              className={CONTROL_ON_CREAM}
+              value={String(product.jewellery_category ?? "")}
+              onChange={(event) => setValue("jewellery_category", event.target.value)}
+              required
+            >
+              <option value="">Select</option>
+              <option value="gold">Gold</option>
+              <option value="silver">Silver</option>
+              <option value="diamond">Diamond</option>
+              <option value="platinum">Platinum</option>
+            </select>
+            <span className="mt-1 block text-xs font-normal text-muted">
+              A diamond piece set in 18K gold is Diamond, not Gold.
+            </span>
           </label>
           <label className="text-sm font-medium">
             Pricing mode

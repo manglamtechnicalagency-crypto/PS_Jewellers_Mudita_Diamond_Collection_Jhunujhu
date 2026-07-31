@@ -10,7 +10,7 @@ import {
   buildProductMetadata,
 } from "@/src/lib/seo";
 import { getPublishedCatalogue } from "@/src/lib/catalogue-server";
-import { isRenderablePath } from "@/src/lib/storefront-routes";
+import { isCatalogueDependentPath, isRenderablePath } from "@/src/lib/storefront-routes";
 import { products as developmentProducts } from "@/src/data";
 
 interface StorefrontPageProps {
@@ -33,8 +33,9 @@ export async function generateMetadata({
 export default async function StorefrontPage({ params }: StorefrontPageProps) {
   const { slug } = await params;
   const path = normalizeRoutePath(slug);
-  const catalogue = await getPublishedCatalogue();
-  if (!catalogue && process.env.NODE_ENV === "production") {
+  const catalogueDependent = isCatalogueDependentPath(path);
+  const catalogue = catalogueDependent ? await getPublishedCatalogue() : [];
+  if (catalogueDependent && !catalogue && process.env.NODE_ENV === "production") {
     return (
       <main className="min-h-screen bg-cream px-6 py-24 text-center">
         <h1 className="font-serif text-4xl">Showroom catalogue unavailable</h1>
@@ -64,7 +65,7 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
           }}
         />
       ) : null}
-      <App initialProducts={catalogue ?? developmentProducts} />
+      <App initialProducts={catalogue ?? (catalogueDependent ? developmentProducts : [])} />
     </>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { findSiteSection, siteSectionGroups } from "@/src/lib/site-sections";
 
 const ACCEPTED_MEDIA =
   "image/jpeg,image/png,image/webp,image/avif,video/mp4,video/webm,video/quicktime";
@@ -50,7 +51,7 @@ function publicationLabel(item: MediaItem) {
     return "Published product";
   if (item.product_links.length) return "Linked product · draft";
   if (item.section_key && item.is_active)
-    return `Live site gallery · ${item.section_key}`;
+    return `Live on site · ${findSiteSection(item.section_key)?.label ?? item.section_key}`;
   return "Uploaded · not published";
 }
 
@@ -70,6 +71,7 @@ export default function MediaManager() {
   const [title, setTitle] = useState("");
   const [altText, setAltText] = useState("");
   const [productId, setProductId] = useState("");
+  const [sectionKey, setSectionKey] = useState("");
   const [role, setRole] = useState("gallery");
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [productSearch, setProductSearch] = useState("");
@@ -150,6 +152,7 @@ export default function MediaManager() {
         contentType: file.type,
         fileSize: file.size,
         ...(productId ? { productId } : {}),
+        ...(!productId && sectionKey ? { sectionKey } : {}),
       };
       const presignResponse = await fetch("/api/admin/media/presign", {
         method: "POST",
@@ -182,6 +185,9 @@ export default function MediaManager() {
           title,
           altText,
           productId: productId || null,
+          // A product link and a storefront slot are mutually exclusive: the
+          // storefront reads section media on its own, unlinked to a product.
+          sectionKey: productId ? null : sectionKey || null,
           role,
         }),
       });
@@ -195,6 +201,7 @@ export default function MediaManager() {
       setFile(null);
       setTitle("");
       setAltText("");
+      setSectionKey("");
       setRole("gallery");
       setMessage("Media uploaded and synchronized.");
       await syncD1();
@@ -323,16 +330,29 @@ export default function MediaManager() {
 
   async function edit(
     id: string,
-    field: "title" | "altText" | "reviewStatus",
+    field: "title" | "altText" | "reviewStatus" | "sectionKey",
     value: string,
   ) {
+    // An empty section select means "not placed on the site", which is null in
+    // the database, not an empty string — `.in(section_key, ...)` would never
+    // match "" and the slot would silently keep the previous image.
+    const payloadValue = field === "sectionKey" && value === "" ? null : value;
     const response = await fetch("/api/admin/media", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, [field]: value }),
+      body: JSON.stringify({ id, [field]: payloadValue }),
     });
-    if (!response.ok) setMessage("Media metadata could not be updated.");
-    else await syncD1();
+    if (!response.ok) {
+      setMessage("Media metadata could not be updated.");
+      return;
+    }
+    if (field === "sectionKey")
+      setItems((current) =>
+        current.map((item) =>
+          item.id === id ? { ...item, section_key: payloadValue } : item,
+        ),
+      );
+    await syncD1();
   }
 
   const normalizedMediaSearch = mediaSearch.trim().toLowerCase();
@@ -411,6 +431,31 @@ export default function MediaManager() {
               ))}
             </select>
           </label>
+          {!productId ? (
+            <label className="mt-4 block text-sm font-medium">
+              Website section
+              <select
+                className="mt-2 min-h-11 w-full border border-line px-3 py-2"
+                value={sectionKey}
+                onChange={(event) => setSectionKey(event.target.value)}
+              >
+                <option value="">Not placed on the website</option>
+                {siteSectionGroups().map(([group, sections]) => (
+                  <optgroup key={group} label={group}>
+                    {sections.map((section) => (
+                      <option key={section.key} value={section.key}>
+                        {section.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <span className="mt-2 block text-xs font-normal text-ink-soft">
+                {findSiteSection(sectionKey)?.hint ??
+                  "Choose a section to publish this file straight to the live website."}
+              </span>
+            </label>
+          ) : null}
           <label className="mt-4 block text-sm font-medium">
             Product media role
             <select
@@ -445,7 +490,7 @@ export default function MediaManager() {
             className="mt-5 min-h-11 w-full bg-ink px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
             disabled={!file || busy}
           >
-            {busy ? "Uploading…" : "Upload to R2"}
+            {busy ? "Uploading…" : "Update"}
           </button>
           {message ? (
             <p className="mt-4 text-sm text-ink-soft" role="status">
@@ -536,6 +581,29 @@ export default function MediaManager() {
                     <option value="approved">Approved for public use</option>
                     <option value="rejected">Rejected</option>
                   </select>
+                  {!item.product_links.length ? (
+                    <label className="mt-2 block text-xs font-semibold uppercase tracking-[0.08em] text-ink-soft">
+                      Website section
+                      <select
+                        className="mt-1 min-h-11 w-full border border-line px-3 py-2 text-sm font-normal normal-case tracking-normal text-ink"
+                        value={item.section_key ?? ""}
+                        onChange={(event) =>
+                          void edit(item.id, "sectionKey", event.target.value)
+                        }
+                      >
+                        <option value="">Not placed on the website</option>
+                        {siteSectionGroups().map(([group, sections]) => (
+                          <optgroup key={group} label={group}>
+                            {sections.map((section) => (
+                              <option key={section.key} value={section.key}>
+                                {section.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
                   <input
                     className="mt-2 min-h-11 w-full border border-line px-3 py-2 text-sm"
                     defaultValue={item.alt_text}

@@ -1,5 +1,7 @@
 # Project Requirements Document
 
+> **Current project baseline — 2026-07-31:** Production is a Vercel-hosted Next.js App Router showroom backed by Supabase/Postgres and Cloudflare R2. Supabase migrations `0001`–`0023` are applied and synchronized. Public catalogue/settings/site-media APIs fail closed when production data is unavailable; `src/data.ts` is fallback data for development only. Admin access requires Supabase Auth, role authorization, and verified TOTP (`aal2`). There is no online payment flow or appointments table. R2 uses `ps-jewellers` and private `ps-jewellers-quarantine-prod`; Upstash REST Redis is the shared rate-limit option.
+
 > **Current implementation correction — 2026-07-26:** The project is **PS Jewellers**. It is a Next.js 16 + TypeScript + Tailwind enquiry-only showroom with a Supabase/Postgres catalogue, Cloudflare R2 media, server-rendered published data, admin CRM, dynamic pricing foundations, and a published-only sitemap. `src/data.ts` is development-only fallback; production public pages fail closed when the published catalogue is unavailable. Shortlist enquiries persist server-side before WhatsApp handoff. There is no online payment processing. Historical requirements below remain audit context; this correction and active code are authoritative.
 
 ## 1. Document Information

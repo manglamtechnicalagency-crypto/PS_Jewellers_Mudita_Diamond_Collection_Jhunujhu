@@ -4,7 +4,7 @@ import { useState } from "react";
 
 type HomepageSettings = { heroEyebrow: string; heroTitle: string; heroDescription: string; primaryCtaLabel: string; primaryCtaHref: string };
 
-const defaults: HomepageSettings = { heroEyebrow: "PS Jewellers · Jhunjhunu", heroTitle: "Luxury jewellery crafted for life's finest occasions.", heroDescription: "BIS hallmarked gold, certified diamonds and handcrafted 925 silver, from our Jhunjhunu showroom.", primaryCtaLabel: "Shop Collection", primaryCtaHref: "/shop" };
+const defaults: HomepageSettings = { heroEyebrow: "PS Jewellers · Jhunjhunu", heroTitle: "Luxury jewellery crafted for life's finest occasions.", heroDescription: "BIS hallmarked gold, certified diamonds and handcrafted 925 silver, from our Jhunjhunu showroom.", primaryCtaLabel: "Shop Gold Collection", primaryCtaHref: "/gold-jewellery" };
 
 // Pick only the fields the API still accepts. The stored row may retain keys
 // from a removed feature (the secondary "Book Appointment" CTA); spreading the

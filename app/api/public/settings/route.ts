@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/src/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const client = await createSupabaseServerClient();
+  const client = createSupabaseServiceClient();
   if (!client) return NextResponse.json({ data: null }, { headers: { "Cache-Control": "no-store" } });
   const { data, error } = await client.from("site_settings").select("setting_key, value").eq("is_public", true);
   if (error) {

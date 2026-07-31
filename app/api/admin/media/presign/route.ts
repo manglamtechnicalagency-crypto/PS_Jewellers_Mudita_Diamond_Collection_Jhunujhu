@@ -5,6 +5,8 @@ import { hasValidSameOrigin, requireAdmin } from "@/src/lib/admin-auth";
 import { createUploadUrl, publicObjectUrl } from "@/src/lib/r2-server";
 import { consumeUploadRateLimit, getTrustedClientKey } from "@/src/lib/upload-rate-limit";
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, validateProductMediaSelection } from "@/src/lib/product-media-policy";
+import { readJsonWithLimit } from "@/src/lib/request-body";
+import { findSiteSection, validateSectionUpload } from "@/src/lib/site-sections";
 
 export const runtime = "nodejs";
 
@@ -17,6 +19,7 @@ const requestSchema = z.object({
   fileSize: z.number().int().positive().max(MAX_MEDIA_BYTES),
   productId: z.string().uuid().optional(),
   mediaId: z.string().uuid().optional(),
+  sectionKey: z.string().regex(/^[a-z0-9-]+$/).max(80).optional(),
   // Measured by the browser before upload. Advisory — a caller can lie — but the
   // size and type limits are authoritative regardless.
   durationSeconds: z.number().positive().optional(),
@@ -38,9 +41,9 @@ export async function POST(request: Request) {
   if (auth.error === "internal") return errorResponse(500, "internal_error", "Admin authentication is temporarily unavailable");
   if (auth.error === "forbidden") return errorResponse(403, "forbidden", "You do not have permission to upload media");
 
-  let body: unknown;
-  try { body = await request.json(); } catch { return errorResponse(400, "invalid_json", "Request body must be valid JSON"); }
-  const parsed = requestSchema.safeParse(body);
+  const bodyResult = await readJsonWithLimit(request, 16_000);
+  if (!bodyResult.ok) return errorResponse(bodyResult.reason === "too_large" ? 413 : 400, bodyResult.reason === "too_large" ? "payload_too_large" : "invalid_json", bodyResult.reason === "too_large" ? "Request body is too large" : "Request body must be valid JSON");
+  const parsed = requestSchema.safeParse(bodyResult.value);
   if (!parsed.success) return errorResponse(422, "validation_error", "Media upload details are invalid");
 
   // Runs for every upload, not just product media. A site or replacement asset
@@ -55,8 +58,15 @@ export async function POST(request: Request) {
       return { type: String(media?.mime_type ?? "") };
     });
   }
-  const policy = validateProductMediaSelection([{ type: parsed.data.contentType, size: parsed.data.fileSize, duration: parsed.data.durationSeconds }], existingTypes);
-  if (!policy.valid) return errorResponse(422, "media_limit", policy.message ?? "Product media is invalid");
+  const section = findSiteSection(parsed.data.sectionKey);
+  if (parsed.data.sectionKey && !section) return errorResponse(422, "validation_error", "Unknown website section");
+  if (section) {
+    const problem = validateSectionUpload(section, { mimeType: parsed.data.contentType, sizeBytes: parsed.data.fileSize });
+    if (problem) return errorResponse(422, "media_limit", problem);
+  } else {
+    const policy = validateProductMediaSelection([{ type: parsed.data.contentType, size: parsed.data.fileSize, duration: parsed.data.durationSeconds }], existingTypes);
+    if (!policy.valid) return errorResponse(422, "media_limit", policy.message ?? "Product media is invalid");
+  }
 
   let objectKey: string;
   if (parsed.data.mediaId) {
@@ -71,8 +81,8 @@ export async function POST(request: Request) {
     objectKey = `quarantine/replacements/${parsed.data.mediaId}/${randomUUID()}.${extension}`;
   } else {
     const extension = parsed.data.contentType.split("/")[1].replace("jpeg", "jpg");
-    const prefix = parsed.data.productId ? `products/${parsed.data.productId}` : "site";
-    objectKey = `${prefix}/${randomUUID()}.${extension}`;
+    const prefix = parsed.data.productId ? `products/${parsed.data.productId}` : `site/${parsed.data.sectionKey ?? "library"}`;
+    objectKey = `quarantine/${prefix}/${randomUUID()}.${extension}`;
   }
   try {
     const uploadUrl = await createUploadUrl(objectKey, parsed.data.contentType, parsed.data.fileSize, 600);

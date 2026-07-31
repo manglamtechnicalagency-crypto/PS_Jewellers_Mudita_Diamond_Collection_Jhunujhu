@@ -11,6 +11,15 @@ export const createProductSchema = z.object({
   careInstructions: z.string().trim().max(5000).default(""),
   categoryId: z.string().uuid(),
   subcategoryId: z.string().uuid().nullable().default(null),
+  /**
+   * Primary merchandising class. Required, with NO default: defaulting to any
+   * value would silently misfile a product, which is the defect this field
+   * exists to fix. Distinct from `categoryId` (jewellery type: Rings, Earrings)
+   * and from `metalPurity` (material composition).
+   */
+  jewelleryCategory: z.enum(["gold", "silver", "diamond", "platinum"], {
+    message: "Select a jewellery category: gold, silver, diamond or platinum.",
+  }),
   metalType: z.string().trim().max(40).default(""),
   metalPurity: z.string().trim().max(40).default(""),
   metalWeightGrams: z.number().nonnegative().nullable().default(null),

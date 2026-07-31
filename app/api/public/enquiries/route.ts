@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hasValidSameOrigin } from "@/src/lib/request-origin";
-import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/src/lib/supabase/service";
 import { randomUUID } from "node:crypto";
 import { consumeUploadRateLimit, getTrustedClientKey } from "@/src/lib/upload-rate-limit";
+import { readJsonWithLimit } from "@/src/lib/request-body";
+
+const MAX_ENQUIRY_BYTES = 32_000;
 
 const enquirySchema = z
   .object({
@@ -55,25 +58,17 @@ export async function POST(request: Request) {
   const limit = await consumeUploadRateLimit(`enquiry:${clientKey.key}`);
   if (limit.limited)
     return NextResponse.json({ error: { code: "rate_limited", message: "Too many enquiries" } }, { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": String(limit.retryAfterSeconds) } });
-  const contentLength = Number(request.headers.get("content-length") ?? 0);
-  if (contentLength > 32_000)
-    return errorResponse(413, "payload_too_large", "Enquiry is too large");
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return errorResponse(
-      400,
-      "invalid_json",
-      "Request body must be valid JSON",
-    );
-  }
+  const bodyResult = await readJsonWithLimit(request, MAX_ENQUIRY_BYTES);
+  if (!bodyResult.ok)
+    return bodyResult.reason === "too_large"
+      ? errorResponse(413, "payload_too_large", "Enquiry is too large")
+      : errorResponse(400, "invalid_json", "Request body must be valid JSON");
+  const body = bodyResult.value;
   const parsed = enquirySchema.safeParse(body);
   if (!parsed.success)
     return errorResponse(422, "validation_error", "Enquiry fields are invalid");
 
-  const client = await createSupabaseServerClient();
+  const client = createSupabaseServiceClient();
   if (!client)
     return errorResponse(
       503,

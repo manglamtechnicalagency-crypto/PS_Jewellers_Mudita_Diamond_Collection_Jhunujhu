@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hasValidSameOrigin, requireAdmin } from "@/src/lib/admin-auth";
+import { readJsonWithLimit } from "@/src/lib/request-body";
 
 /**
  * Manages the calling admin's idle-lock PIN.
@@ -46,9 +47,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const result = await gate(request);
   if ("response" in result) return result.response;
-  let body: unknown;
-  try { body = await request.json(); } catch { return errorResponse(400, "invalid_json", "Request body must be valid JSON"); }
-  const parsed = bodySchema.safeParse(body);
+  const bodyResult = await readJsonWithLimit(request, 4_096);
+  if (!bodyResult.ok) return errorResponse(bodyResult.reason === "too_large" ? 413 : 400, bodyResult.reason === "too_large" ? "payload_too_large" : "invalid_json", bodyResult.reason === "too_large" ? "Request body is too large" : "Request body must be valid JSON");
+  const parsed = bodySchema.safeParse(bodyResult.value);
   if (!parsed.success) return errorResponse(422, "validation_error", "The PIN must be exactly 6 digits");
 
   const { error } = await result.auth.client.rpc("set_admin_pin", { p_pin: parsed.data.pin });

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hasValidSameOrigin, requireAdmin } from "@/src/lib/admin-auth";
+import { readJsonWithLimit } from "@/src/lib/request-body";
 
 const sourceSchema = z.enum(["manual", "market_feed", "supplier", "import"]);
 const rateSchema = z.object({
@@ -34,8 +35,9 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   const gate = await admin(request);
   if ("response" in gate) return gate.response;
-  let body: unknown; try { body = await request.json(); } catch { return errorResponse(400, "invalid_json", "Request body must be valid JSON"); }
-  const parsed = rateSchema.safeParse(body);
+  const bodyResult = await readJsonWithLimit(request, 16_000);
+  if (!bodyResult.ok) return errorResponse(bodyResult.reason === "too_large" ? 413 : 400, bodyResult.reason === "too_large" ? "payload_too_large" : "invalid_json", bodyResult.reason === "too_large" ? "Request body is too large" : "Request body must be valid JSON");
+  const parsed = rateSchema.safeParse(bodyResult.value);
   if (!parsed.success) return errorResponse(422, "validation_error", "Metal rate fields are invalid; reason is required");
   const rate = parsed.data;
   const effectiveAt = rate.effectiveAt ? new Date(rate.effectiveAt) : new Date();
@@ -53,8 +55,9 @@ export async function PATCH(request: Request) {
 export async function POST(request: Request) {
   const gate = await admin(request);
   if ("response" in gate) return gate.response;
-  let body: unknown; try { body = await request.json(); } catch { return errorResponse(400, "invalid_json", "Request body must be valid JSON"); }
-  const parsed = z.object({ action: z.literal("apply_due") }).strict().safeParse(body);
+  const bodyResult = await readJsonWithLimit(request, 4_096);
+  if (!bodyResult.ok) return errorResponse(bodyResult.reason === "too_large" ? 413 : 400, bodyResult.reason === "too_large" ? "payload_too_large" : "invalid_json", bodyResult.reason === "too_large" ? "Request body is too large" : "Request body must be valid JSON");
+  const parsed = z.object({ action: z.literal("apply_due") }).strict().safeParse(bodyResult.value);
   if (!parsed.success) return errorResponse(422, "validation_error", "Action is invalid");
   const { data, error } = await gate.auth.client.rpc("apply_due_metal_rate_schedules");
   if (error) return errorResponse(500, "database_error", "Due metal rates could not be applied");

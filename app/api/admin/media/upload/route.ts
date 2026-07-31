@@ -4,6 +4,8 @@ import { z } from "zod";
 import { hasValidSameOrigin, requireAdmin } from "@/src/lib/admin-auth";
 import { deleteObject, publicObjectUrl, uploadObject } from "@/src/lib/r2-server";
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES, validateProductMediaSelection } from "@/src/lib/product-media-policy";
+import { readFormDataWithLimit } from "@/src/lib/request-body";
+import { processQuarantinedMedia } from "@/src/lib/media-processing-server";
 
 export const runtime = "nodejs";
 
@@ -32,8 +34,9 @@ export async function POST(request: Request) {
   if (auth.error === "internal") return errorResponse(500, "internal_error", "Admin authentication is temporarily unavailable");
   if (auth.error === "forbidden") return errorResponse(403, "forbidden", "You do not have permission to upload media");
 
-  let form: FormData;
-  try { form = await request.formData(); } catch { return errorResponse(400, "invalid_form", "Upload form is invalid"); }
+  const formResult = await readFormDataWithLimit(request, MAX_MEDIA_BYTES + 128_000);
+  if (!formResult.ok) return errorResponse(formResult.reason === "too_large" ? 413 : 400, formResult.reason === "too_large" ? "payload_too_large" : "invalid_form", formResult.reason === "too_large" ? "Upload request is too large" : "Upload form is invalid");
+  const form = formResult.value;
   const file = form.get("file");
   if (!(file instanceof File)) return errorResponse(422, "missing_file", "Choose an image or video first");
   if (file.size <= 0 || file.size > MAX_MEDIA_BYTES) return errorResponse(422, "file_too_large", "Media exceeds the upload size limit");
@@ -58,14 +61,18 @@ export async function POST(request: Request) {
   if (!policy.valid) return errorResponse(422, "media_limit", policy.message ?? "Product media is invalid");
 
   const extension = file.type.split("/")[1].replace("jpeg", "jpg");
-  const objectKey = `products/${metadata.data.productId}/${randomUUID()}.${extension}`;
+  const objectKey = `quarantine/products/${metadata.data.productId}/${randomUUID()}.${extension}`;
+  let cleanupKey = objectKey;
+  let registered = false;
   try {
     await uploadObject(objectKey, new Uint8Array(await file.arrayBuffer()), file.type);
+    const processed = await processQuarantinedMedia(objectKey, file.type, file.size);
+    cleanupKey = processed.storageKey;
     const { data, error } = await auth.client.rpc("register_media", {
-      p_storage_key: objectKey,
+      p_storage_key: processed.storageKey,
       p_original_filename: file.name,
       p_mime_type: file.type,
-      p_file_size_bytes: file.size,
+      p_file_size_bytes: processed.fileSizeBytes,
       p_title: metadata.data.title || file.name,
       p_alt_text: metadata.data.altText || metadata.data.title || file.name,
       p_caption: "",
@@ -75,11 +82,16 @@ export async function POST(request: Request) {
       p_display_order: metadata.data.displayOrder,
     });
     if (error) throw error;
-    const { error: approvalError } = await auth.client.from("media").update({ review_status: "approved" }).eq("id", data.id).is("deleted_at", null);
-    if (approvalError) throw approvalError;
-    return NextResponse.json({ data: { ...data, public_url: publicObjectUrl(objectKey) } }, { status: 201, headers: { "Cache-Control": "no-store" } });
+    registered = true;
+    if (processed.reviewStatus === "approved") {
+      const { error: approvalError } = await auth.client.from("media").update({ review_status: "approved" }).eq("id", data.id).is("deleted_at", null);
+      if (approvalError) return errorResponse(500, "approval_failed", "Media was registered safely but could not be approved");
+    }
+    return NextResponse.json({ data: { ...data, public_url: publicObjectUrl(processed.storageKey) } }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    try { await deleteObject(objectKey); } catch (cleanupError) { console.error("[admin-media-upload] orphan_cleanup_failed", { errorName: cleanupError instanceof Error ? cleanupError.name : "UnknownError" }); }
+    if (!registered) {
+      try { await deleteObject(cleanupKey); } catch (cleanupError) { console.error("[admin-media-upload] orphan_cleanup_failed", { errorName: cleanupError instanceof Error ? cleanupError.name : "UnknownError" }); }
+    }
     console.error("[admin-media-upload] failed", { errorName: error instanceof Error ? error.name : "UnknownError" });
     return errorResponse(500, "upload_failed", "Media could not be uploaded and registered");
   }

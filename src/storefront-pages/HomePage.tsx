@@ -4,13 +4,34 @@ import ProductCard from "../components/ProductCard";
 import Reveal from "../components/Reveal";
 import { assets, blogPosts, categories, categoryToPath, collections, formatPrice, offers, testimonials, trustItems } from "../data";
 import type { AppState, HomepageSettings, Product } from "../types";
+import type { SectionMediaMap } from "../lib/site-sections";
+import { matchesJewelleryCategory, newArrivals } from "../lib/catalogue-filters";
 import Image from "next/image";
 
 interface HomePageProps {
   appState?: AppState;
   settings: HomepageSettings;
   products: Product[];
+  /** Admin-assigned images, keyed by `SITE_SECTIONS[].key`. */
+  sectionMedia?: SectionMediaMap;
 }
+
+/**
+ * Gold membership comes from the admin classification, never from `purity`.
+ * A diamond ring mounted in 18K gold is diamond jewellery and must not appear
+ * in a gold rail.
+ */
+function isGold(product: Product): boolean {
+  return matchesJewelleryCategory(product, "gold");
+}
+
+const COLLECTION_SECTION_KEYS: Record<string, string> = {
+  "Heritage Antique": "home.collection.heritage-antique",
+  "Celeste Diamonds": "home.collection.celeste-diamonds",
+  "Maharani Bridal": "home.collection.maharani-bridal",
+  "Everyday Luxe": "home.collection.everyday-luxe",
+  "Oxidised Heritage": "home.collection.oxidised-heritage",
+};
 
 function SectionTitle({ kicker, title, copy, tone = "light" }: { kicker: string; title: string; copy?: ReactNode; tone?: "light" | "dark" }) {
   return (
@@ -22,8 +43,12 @@ function SectionTitle({ kicker, title, copy, tone = "light" }: { kicker: string;
   );
 }
 
-export default function HomePage({ appState, settings, products }: HomePageProps) {
+export default function HomePage({ appState, settings, products, sectionMedia = {} }: HomePageProps) {
   const [loadHeroVideo, setLoadHeroVideo] = useState(false);
+  // Every slot keeps its bundled asset as the fallback, so an unconfigured or
+  // offline CMS renders exactly the site that shipped.
+  const sectionImage = (key: string, fallback: string) => sectionMedia[key]?.url ?? fallback;
+  const sectionAlt = (key: string, fallback: string) => sectionMedia[key]?.alt || fallback;
   useEffect(() => {
     const timeoutId = window.setTimeout(() => setLoadHeroVideo(true), 1200);
     return () => window.clearTimeout(timeoutId);
@@ -35,17 +60,29 @@ export default function HomePage({ appState, settings, products }: HomePageProps
     "Everyday Luxe": "/shop",
     "Oxidised Heritage": "/silver-jewellery",
   };
-  const featured = products.slice(0, 8);
+  const goldProducts = products.filter(isGold);
+  // Featured previously took the first eight catalogue rows, so an ordering
+  // change could leave the homepage with no gold at all. Lead with up to four
+  // gold pieces, then top up from the rest of the catalogue.
+  const goldLead = goldProducts.slice(0, 4);
+  const goldLeadIds = new Set(goldLead.map((product) => product.id));
+  const featured = [
+    ...goldLead,
+    ...products.filter((product) => !goldLeadIds.has(product.id)),
+  ].slice(0, 8);
+  const goldShowcase = goldProducts.slice(0, 4);
   const heroHighlight = products.find((product) => product.badge === "Best Seller") ?? products[0];
   const bestSellers = products.filter((product) => ["Best Seller", "Popular", "Premium", "Loved"].includes(product.badge)).slice(0, 4);
-  const newArrivals = products.filter((product) => ["New Arrival", "New", "Minimal"].includes(product.badge)).slice(0, 4);
+  // Driven by the admin flag and publication date — never by badge text.
+  const goldNewArrivals = newArrivals(products, { jewelleryCategory: "gold", limit: 4 });
+  const allNewArrivals = newArrivals(products, { limit: 4 });
 
   return (
     <SiteLayout appState={appState}>
       <section className="relative flex min-h-[78svh] sm:min-h-[85vh] items-end overflow-hidden bg-ink">
         <video
-          src={loadHeroVideo ? assets.heroVideo : undefined}
-          poster={assets.antiqueNecklace}
+          src={loadHeroVideo ? sectionImage("home.hero.video", assets.heroVideo) : undefined}
+          poster={sectionImage("home.hero.poster", assets.antiqueNecklace)}
           autoPlay
           muted
           loop
@@ -67,11 +104,23 @@ export default function HomePage({ appState, settings, products }: HomePageProps
               {settings.heroDescription}
             </p>
             <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:flex-wrap sm:gap-4 sm:pt-2">
+              {/*
+                The href was hardcoded to /shop while the label came from
+                settings, so an admin editing the CTA changed the words but not
+                the destination. It now honours primaryCtaHref, which defaults
+                to the gold collection.
+              */}
               <a
-                href="/shop"
-                className="inline-flex min-h-12 w-full items-center justify-center rounded-xs bg-gold-500 px-8 text-sm font-semibold text-white transition-colors hover:bg-gold-600 sm:w-auto"
+                href={settings.primaryCtaHref || "/gold-jewellery"}
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-xs bg-gold-500 px-8 text-sm font-semibold text-white transition-colors hover:bg-gold-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-300 focus-visible:ring-offset-2 focus-visible:ring-offset-ink sm:w-auto"
               >
                 {settings.primaryCtaLabel}
+              </a>
+              <a
+                href="/shop"
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-xs border border-white/60 px-8 text-sm font-semibold text-white transition-colors hover:bg-white hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-ink sm:w-auto"
+              >
+                Shop All Jewellery
               </a>
             </div>
           </div>
@@ -101,7 +150,13 @@ export default function HomePage({ appState, settings, products }: HomePageProps
             <Reveal key={collection.title}>
               <a href={collectionLinks[collection.title] ?? "/shop"} className="group block overflow-hidden rounded-xs border border-line bg-white shadow-card">
                 <div className="relative aspect-[4/3] overflow-hidden">
-                  <Image src={collection.image} alt={collection.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 340px" className="object-cover transition-transform duration-700 group-hover:scale-105" />
+                  <Image
+                    src={sectionImage(COLLECTION_SECTION_KEYS[collection.title] ?? "", collection.image)}
+                    alt={sectionAlt(COLLECTION_SECTION_KEYS[collection.title] ?? "", collection.title)}
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 340px"
+                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
                 </div>
                 <div className="p-5">
                   <h3 className="font-serif text-xl text-ink">{collection.title}</h3>
@@ -110,6 +165,43 @@ export default function HomePage({ appState, settings, products }: HomePageProps
               </a>
             </Reveal>
           ))}
+        </div>
+
+        {/*
+          Gold New Arrivals. Lives inside Featured collections so the newest
+          gold pieces sit with the rest of the curated merchandising rather
+          than competing with it further down the page. Membership is
+          `jewelleryCategory === "gold" && isNewArrival`, ordered by
+          publication date — no badge-text matching, no purity inference.
+        */}
+        <div className="mt-12 border-t border-line pt-10 sm:mt-14 sm:pt-12">
+          <div className="mb-6 flex flex-col gap-2 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600 sm:text-sm">Gold · New arrivals</p>
+              <h3 className="mt-2 font-serif text-xl leading-snug text-ink sm:text-3xl">Just added to the gold collection.</h3>
+            </div>
+            <a
+              href="/gold-jewellery"
+              className="inline-flex min-h-11 w-fit items-center text-sm font-semibold text-gold-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-300 focus-visible:ring-offset-2"
+            >
+              See all gold jewellery →
+            </a>
+          </div>
+          {goldNewArrivals.length ? (
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
+              {goldNewArrivals.map((product) => (
+                <ProductCard key={product.id} product={product} appState={appState} compact />
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-xs border border-dashed border-line py-10 text-center text-sm text-ink-soft">
+              No new gold pieces just now. Browse the full{" "}
+              <a href="/gold-jewellery" className="font-semibold text-gold-700 hover:underline">
+                gold collection
+              </a>
+              .
+            </p>
+          )}
         </div>
       </section>
 
@@ -147,24 +239,66 @@ export default function HomePage({ appState, settings, products }: HomePageProps
         </div>
       </section>
 
-      <section className="grid gap-1 sm:grid-cols-2">
+      <section aria-labelledby="gold-heading" className="grid gap-1 sm:grid-cols-2">
         <div className="flex flex-col justify-center gap-3 bg-cream px-4 py-10 sm:p-10 lg:p-16">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-600 sm:text-sm">Gold Jewellery</p>
-          <h2 className="font-serif text-2xl text-ink sm:text-4xl">Hallmarked gold designs for everyday and festive style.</h2>
-          <a href="/gold-jewellery" className="mt-2 inline-block w-fit text-sm font-semibold text-gold-600 hover:underline">
+          <h2 id="gold-heading" className="font-serif text-2xl text-ink sm:text-4xl">Hallmarked gold designs for everyday and festive style.</h2>
+          <p className="text-sm text-ink-soft sm:text-base">
+            BIS hallmarked 22K and 18K gold, with weight, purity and making detail listed on every piece.
+          </p>
+          <a
+            href="/gold-jewellery"
+            className="mt-3 inline-flex min-h-11 w-fit items-center rounded-xs bg-gold-500 px-6 text-sm font-semibold text-white transition-colors hover:bg-gold-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-300 focus-visible:ring-offset-2"
+          >
             Explore Gold →
           </a>
         </div>
-        <Image src={assets.goldBangles} alt="Gold jewellery" width={1200} height={800} sizes="(max-width: 640px) 100vw, 50vw" className="h-64 w-full object-cover sm:h-auto sm:max-h-[520px]" />
+        <Image
+          src={sectionImage("home.gold-banner", assets.goldBangles)}
+          alt={sectionAlt("home.gold-banner", "Gold jewellery")}
+          width={1200}
+          height={800}
+          sizes="(max-width: 640px) 100vw, 50vw"
+          className="h-64 w-full object-cover sm:h-auto sm:max-h-[520px]"
+        />
       </section>
+
+      {goldShowcase.length ? (
+        <section className="mx-auto max-w-content px-4 py-12 sm:px-5 sm:py-16 lg:px-10">
+          <SectionTitle
+            kicker="Gold jewellery"
+            title="Hallmarked gold, ready to wear."
+            copy="Chains, bangles, mangalsutra and studs in 22K and 18K."
+          />
+          <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
+            {goldShowcase.map((product) => (
+              <ProductCard key={product.id} product={product} appState={appState} compact />
+            ))}
+          </div>
+          <div className="mt-8 text-center">
+            <a
+              href="/gold-jewellery"
+              className="inline-flex min-h-11 items-center rounded-xs border border-gold-500 px-6 text-sm font-semibold text-gold-700 transition-colors hover:bg-gold-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-300 focus-visible:ring-offset-2"
+            >
+              View all gold jewellery →
+            </a>
+          </div>
+        </section>
+      ) : null}
 
       <section className="mx-auto max-w-content px-4 py-12 sm:px-5 sm:py-16 lg:px-10">
         <SectionTitle kicker="New arrivals" title="Fresh pieces for a modern jewellery wardrobe." />
-        <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
-          {newArrivals.map((product) => (
-            <ProductCard key={product.id} product={product} appState={appState} compact />
-          ))}
-        </div>
+        {allNewArrivals.length ? (
+          <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
+            {allNewArrivals.map((product) => (
+              <ProductCard key={product.id} product={product} appState={appState} compact />
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-xs border border-dashed border-line py-12 text-center text-sm text-ink-soft">
+            No new arrivals just now. Please check back soon.
+          </p>
+        )}
       </section>
 
       <section className="bg-gold-500 py-10 sm:py-14">
@@ -217,9 +351,20 @@ export default function HomePage({ appState, settings, products }: HomePageProps
       ) : null}
 
       <section className="grid grid-cols-3 gap-1 sm:grid-cols-6">
-        {[assets.antiqueNecklace, assets.bridalJewellery, assets.diamondRing, assets.goldBangles, assets.earrings, assets.pendant].map((image, index) => (
-          <Image key={image + index} src={image} alt="" width={400} height={400} sizes="(max-width: 640px) 33vw, 17vw" className="aspect-square w-full object-cover" />
-        ))}
+        {[assets.antiqueNecklace, assets.bridalJewellery, assets.diamondRing, assets.goldBangles, assets.earrings, assets.pendant].map((image, index) => {
+          const key = `home.gallery.${index + 1}`;
+          return (
+            <Image
+              key={key}
+              src={sectionImage(key, image)}
+              alt={sectionAlt(key, "")}
+              width={400}
+              height={400}
+              sizes="(max-width: 640px) 33vw, 17vw"
+              className="aspect-square w-full object-cover"
+            />
+          );
+        })}
       </section>
 
       <section className="bg-ink py-12 sm:py-16">

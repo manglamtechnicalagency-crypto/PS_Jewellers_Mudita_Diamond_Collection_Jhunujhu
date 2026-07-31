@@ -18,9 +18,9 @@ The application combines a polished public storefront with a secure foundation f
 - Nonce-based Content-Security-Policy issued per request from `proxy.ts`, with no `unsafe-inline` in `script-src`.
 - Protected admin dashboard at `/admin` with Supabase SSR sessions, role checks, and **server-enforced TOTP** — sessions below `aal2` are rejected.
 - Product listing and creation API at `/api/admin/products` with Zod validation and database-backed access control.
-- Controlled R2 upload presigning at `/api/r2-presign` with authentication, MIME validation, generated object keys, a 10 MiB limit, and rate limiting that fails closed.
+- Controlled R2 upload presigning at `/api/admin/media/presign` with authentication, MIME validation, generated object keys, per-kind size limits, and rate limiting that fails closed.
 - Supabase migrations covering the catalogue, public read policies, storefront engagement tables, search and pricing, reference data, media, site settings, and admin workflows.
-- 48 unit tests over upload policy, rate limiting, CSP construction, CSRF, SEO, catalogue integrity and asset resolution.
+- Node unit and security tests over upload policy, rate limiting, CSP construction, CSRF, SEO, catalogue integrity, asset resolution, and bounded request parsing.
 
 ### Catalogue status
 
@@ -73,18 +73,43 @@ Copy `.env.example` to `.env.local` and fill in the required values. Keep server
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase public client key | Browser-safe |
 | `SUPABASE_SECRET_KEY` | Privileged server operations | Server-only |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | R2 server integration | Server-only |
-| `R2_BUCKET_NAME` | Upload destination bucket | Server-only |
-| `R2_UPLOAD_ADMIN_TOKEN` | Presign endpoint protection | Server-only |
+| `R2_BUCKET_NAME` | Public clean-media destination bucket | Server-only |
+| `R2_QUARANTINE_BUCKET_NAME` | Private upload quarantine bucket; never attach a public domain | Server-only |
 | `NEXT_PUBLIC_R2_PUBLIC_URL` | Public read base URL/CDN. Added to `img-src` and `next/image` `remotePatterns`. | Browser-safe |
 | `NEXT_PUBLIC_SITE_URL` | Canonical URLs, sitemap and OpenGraph. Falls back to localhost. | Browser-safe |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Shared upload rate limiting. Without these the limiter is per-instance. | Server-only |
 
 Never commit `.env`, `.env.local`, service-role keys, R2 secrets, or access tokens.
 
+### Vercel production setup
+
+In the Vercel project settings, add each variable separately and select **Production**. Do not paste `KEY=VALUE` into the key field.
+
+```text
+NEXT_PUBLIC_SITE_URL=https://ps-jewellers-mudita-diamond-collect.vercel.app
+R2_ACCOUNT_ID=b4648b1e92022a7f612c02a7538d4a57
+R2_BUCKET_NAME=ps-jewellers
+R2_QUARANTINE_BUCKET_NAME=ps-jewellers-quarantine-prod
+```
+
+Also add the Supabase and R2 credentials listed above. `SUPABASE_SECRET_KEY`, `R2_ACCESS_KEY_ID`, and `R2_SECRET_ACCESS_KEY` are server-only secrets and must never use a `NEXT_PUBLIC_` prefix. After changing production variables, create a new production deployment; existing deployments do not receive updated environment values.
+
+For shared rate limiting, create a Redis database at [Upstash](https://console.upstash.com), open its **REST API** details, and copy the REST URL and token into `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. Keep the token server-only.
+
+Verify the deployment:
+
+```powershell
+curl.exe https://ps-jewellers-mudita-diamond-collect.vercel.app/api/catalogue
+curl.exe https://ps-jewellers-mudita-diamond-collect.vercel.app/api/public/settings
+curl.exe https://ps-jewellers-mudita-diamond-collect.vercel.app/api/public/site-media
+```
+
+All three endpoints should return HTTP `200` with JSON. If variables were added after the last deployment, redeploy with `npx vercel --prod` or the Vercel dashboard's **Redeploy** action.
+
 ## Admin setup
 
 1. Configure the Supabase variables in `.env.local`.
-2. Apply the migrations in order — `supabase db push`, or run `0001` … `0005` from `supabase/migrations/`. See [the migration guide](supabase/migrations/README.md).
+2. Apply every migration in filename order with `supabase db push`. See [the migration guide](supabase/migrations/README.md).
 3. Create an authenticated Supabase user.
 4. Assign the role using the **service role** or the SQL editor. A trigger blocks self-promotion, so the first `super_admin` cannot be set from the app:
    ```sql
@@ -116,7 +141,7 @@ Generated: `/sitemap.xml`, `/robots.txt`
 | `/admin/products` | Product management foundation |
 | `GET /api/admin/products` | List products for authorized admins |
 | `POST /api/admin/products` | Create a validated product |
-| `POST /api/r2-presign` | Create a controlled R2 upload URL |
+| `POST /api/admin/media/presign` | Create a controlled R2 upload URL |
 
 ## Project structure
 
@@ -199,4 +224,4 @@ Built for PS Jewellers by [Manglam Technical Agency](https://github.com/manglamt
 
 The public server-rendered catalogue is read from the published, non-deleted Supabase `catalogue_products` view. The browser refreshes through `/api/catalogue`, which uses the same Supabase source of truth and fails closed when unavailable. Cloudflare D1 is an optional export/mirror only and never overrides fresh Supabase publication state. Product images and videos are stored in Cloudflare R2; Supabase `media` and `product_media` keep metadata and links. Admin users with verified MFA can upload through short-lived presigned URLs, register/edit/delete media, and manage products from `/admin/products` and `/admin/media`.
 
-Configure `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, and `NEXT_PUBLIC_R2_PUBLIC_URL` in the deployment environment. For the D1 mirror, create the database, run `cloudflare/d1/catalogue_products.sql`, set `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_DATABASE_ID`, and `CLOUDFLARE_API_TOKEN`, then trigger the protected `/api/admin/d1-sync` endpoint after the Supabase migrations. The Cloudflare account used during this implementation had no R2 bucket or D1 database available, so no remote resources were created or migrated automatically.
+Configure `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_QUARANTINE_BUCKET_NAME`, and `NEXT_PUBLIC_R2_PUBLIC_URL` in the deployment environment. Keep the quarantine bucket private. For the D1 mirror, create the database, run `cloudflare/d1/catalogue_products.sql`, set `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_DATABASE_ID`, and `CLOUDFLARE_API_TOKEN`, then trigger the protected `/api/admin/d1-sync` endpoint after the Supabase migrations. The Cloudflare account used during this implementation had no R2 bucket or D1 database available, so no remote resources were created or migrated automatically.

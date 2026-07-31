@@ -9,13 +9,13 @@ Customer showroom browsing, shortlist enquiry creation, WhatsApp handoff, admin 
 | Area | Command/evidence | Result | Remaining risk |
 |---|---|---|---|
 | TypeScript | `npm run type-check` | PASS | Runtime/API/database paths still need integration coverage |
-| Unit/security tests | `npm test` | PASS: 48 tests | No Supabase role/RLS test environment |
-| Production build | `npm run build` | PASS | No browser smoke suite |
+| Unit/security tests | `npm test` | PASS | No disposable Supabase role/RLS test environment |
+| Production build | `npm run build` | PASS | Authenticated browser mutation paths require staging fixtures |
 | Dependencies | `npm audit --omit=dev --audit-level=high` | PASS: 0 vulnerabilities | Review advisories after dependency updates |
-| Database migrations | `npx supabase migration list` | PASS: local/remote through `0014` | RLS matrix not automated |
-| Accessibility | Not configured | NOT VERIFIED | Add axe + keyboard/manual browser pass |
-| Responsive/browser | Not configured | NOT VERIFIED | Run Playwright/device matrix |
-| Upload content scanning | R2 direct upload only | NOT COMPLETE | Add Worker quarantine, magic-byte checks, malware scan, variants |
+| Database migrations | SQL review through `0022` | PASS in repository | Execute AAL1/AAL2 role matrix on a disposable branch database |
+| Accessibility | Playwright smoke assertions | PASS | Full keyboard/manual WCAG audit remains |
+| Responsive/browser | Playwright desktop/mobile matrix | PASS | Authenticated flows require staging state |
+| Upload content processing | Private R2 quarantine, signature validation, image decode/re-encode and metadata stripping | PASS for images | Videos remain private/pending until a dedicated video scanner publishes them |
 
 ## Critical journeys
 
@@ -27,6 +27,6 @@ Customer showroom browsing, shortlist enquiry creation, WhatsApp handoff, admin 
 
 ## Release blockers
 
-- No production release until R2 quarantine scanning exists.
+- No production release until `R2_QUARANTINE_BUCKET_NAME` points to a private bucket and migration `0022` is applied.
 - No claim of accessibility, browser compatibility, performance targets, or RLS regression coverage until those suites execute against test fixtures.
 - Rotate any previously exposed R2 credentials before production deployment.

@@ -1,4 +1,5 @@
 import type { Product } from "../types";
+import { newArrivals } from "./catalogue-filters";
 import type { SimplePageType } from "../storefront-pages/SimplePage";
 
 /**
@@ -14,7 +15,20 @@ import type { SimplePageType } from "../storefront-pages/SimplePage";
  * Anything that needs to know "which URLs exist" must read it from here.
  */
 
-export type CatalogueFilterKind = "all" | "category" | "collection" | "badge" | "offers" | "keyword";
+export type CatalogueFilterKind =
+  | "all"
+  | "category"
+  | "collection"
+  | "badge"
+  | "offers"
+  | "keyword"
+  /**
+   * Driven by the admin `isNewArrival` flag and sorted by publication date.
+   * Previously this was `kind: "badge", value: "New Arrival"`, which matched
+   * editorial badge *text* — so renaming a badge silently emptied the page and
+   * a genuinely new product with a different badge never appeared.
+   */
+  | "new-arrivals";
 
 export interface CatalogueRoute {
   path: string;
@@ -46,7 +60,7 @@ export const CATALOGUE_ROUTES: CatalogueRoute[] = [
   { path: "/shop", label: "Shop", title: "Shop All Jewellery", inNav: true, kind: "all" },
 
   // Previously dead: linked in the header, handled nowhere.
-  { path: "/new-arrivals", label: "New In", title: "New Arrivals", inNav: true, kind: "badge", value: "New Arrival", emptyMessage: "No new arrivals just now. Please check back soon." },
+  { path: "/new-arrivals", label: "New In", title: "New Arrivals", inNav: true, kind: "new-arrivals", emptyMessage: "No new arrivals just now. Please check back soon." },
   { path: "/gold-jewellery", label: "Gold", title: "Gold Jewellery", inNav: true, kind: "category", value: "Gold Jewellery" },
   { path: "/diamond-jewellery", label: "Diamond", title: "Diamond Jewellery", inNav: true, kind: "category", value: "Diamond Jewellery" },
   { path: "/bridal-collection", label: "Bridal", title: "Bridal Collection", inNav: true, kind: "keyword", terms: ["bridal", "wedding", "dulhan"], emptyMessage: "No bridal pieces are published yet. Please contact the showroom." },
@@ -121,6 +135,13 @@ export function isRenderablePath(path: string): boolean {
   return path.startsWith("/product/") || path.startsWith("/project/") || RENDERABLE_SET.has(path);
 }
 
+const CATALOGUE_PATHS = new Set(["/", ...CATALOGUE_ROUTES.map((route) => route.path), ...SHOP_ALIASES]);
+
+/** Content-only routes remain available during a catalogue storage outage. */
+export function isCatalogueDependentPath(path: string): boolean {
+  return path.startsWith("/product/") || path.startsWith("/project/") || CATALOGUE_PATHS.has(path);
+}
+
 const haystack = (product: Product) =>
   [product.name, product.category, product.collection, product.stoneType, ...(product.tags ?? [])]
     .join(" ")
@@ -133,6 +154,8 @@ export function filterProductsForRoute(route: CatalogueRoute, products: Product[
       return products;
     case "category":
       return products.filter((product) => product.category === route.value);
+    case "new-arrivals":
+      return newArrivals(products);
     case "collection":
       return products.filter((product) => product.collection === route.value);
     case "badge":

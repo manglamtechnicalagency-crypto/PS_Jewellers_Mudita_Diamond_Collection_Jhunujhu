@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const baseURL = process.env.E2E_BASE_URL || "https://ps-jewellers-mudita-diamond-collect.vercel.app";
+const baseURL = process.env.E2E_BASE_URL?.trim() || "http://127.0.0.1:3000";
 
 export default defineConfig({
   testDir: "./tests/browser",
@@ -15,6 +15,14 @@ export default defineConfig({
     trace: "retain-on-failure",
     storageState: process.env.E2E_ADMIN_STORAGE_STATE || undefined,
   },
+  webServer: process.env.E2E_BASE_URL?.trim()
+    ? undefined
+    : {
+        command: "npm run start",
+        url: "http://127.0.0.1:3000",
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+      },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
     { name: "mobile-chrome", use: { ...devices["Pixel 5"] } },

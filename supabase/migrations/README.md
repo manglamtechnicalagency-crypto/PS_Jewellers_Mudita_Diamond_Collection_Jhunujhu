@@ -21,6 +21,13 @@ every earlier file has already run.
 | `0014_media_replacements.sql` | Stores prior R2 keys during replacement until the new media is approved. |
 | `0015_seed_showroom_catalogue.sql` | Seeds the published showroom products and reconnects registered bundled R2 media. |
 | `0016_price_on_request_catalogue.sql` | Removes public numeric pricing and sets every active product to price-on-request mode. |
+| `0017_product_care_instructions.sql` | Adds care instructions and refreshes the catalogue projection. |
+| `0018_admin_pin_lock.sql` | Adds server-verified idle-lock PIN controls and lockout state. |
+| `0019_profiles_rls_rationale.sql` | Documents and hardens profile access policies. |
+| `0020_archive_media.sql` | Adds the transactional media archive function. |
+| `0021_jewellery_category.sql` | Adds canonical jewellery category classification and audit support. |
+| `0022_security_and_atomicity.sql` | Requires AAL2 in database role helpers, removes direct anonymous data access, and adds atomic product write/pricing RPCs. |
+| `0023_remove_book_appointment.sql` | Removes the retired appointment table and CMS route data. Destructive; back up first. |
 
 ```bash
 supabase db push          # or: supabase migration up
@@ -49,8 +56,8 @@ recursing into themselves:
 
 | Role | Reads | Writes |
 | --- | --- | --- |
-| `anon` | Published products, active media/taxonomy, published pages, active stores, approved reviews, metal rates | Enquiries, appointments, newsletter, reviews — insert only, always in a pending/new state |
-| `authenticated` (no admin role) | Same as `anon`, plus own profile | Own profile |
+| `anon` | Server-curated Next API/page responses; active stores only where explicitly granted | None directly on engagement or catalogue base tables |
+| `authenticated` (no admin role) | Own profile and explicitly granted public data | Own profile |
 | `editor` | All catalogue | Catalogue, media, pages, enquiries, appointments, reviews |
 | `admin` | Everything | Above plus metal rates, profiles |
 | `super_admin` | Everything | Above plus role assignment |
@@ -110,7 +117,7 @@ every affected `weight_based` product via trigger.
 
 ## First-run checklist
 
-1. `supabase db push` (applies `0001` through `0013` in filename order)
+1. `supabase db push` (applies every migration through `0022` in filename order)
 2. Create the first admin in Supabase Auth, then set the role using the **service
    role** or the SQL editor — the escalation guard blocks self-promotion:
    ```sql

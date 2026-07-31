@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hasValidSameOrigin, requireAdmin } from "@/src/lib/admin-auth";
+import { readJsonWithLimit } from "@/src/lib/request-body";
 
 const schema = z
   .object({
@@ -44,16 +45,14 @@ export async function PATCH(request: Request) {
       { error: { message: "You do not have permission" } },
       { status: auth.error === "forbidden" ? 403 : 401 },
     );
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
+  const bodyResult = await readJsonWithLimit(request, 128_000);
+  if (!bodyResult.ok) {
     return NextResponse.json(
-      { error: { message: "Invalid JSON" } },
-      { status: 400 },
+      { error: { message: bodyResult.reason === "too_large" ? "Request body is too large" : "Invalid JSON" } },
+      { status: bodyResult.reason === "too_large" ? 413 : 400 },
     );
   }
-  const parsed = schema.safeParse(body);
+  const parsed = schema.safeParse(bodyResult.value);
   if (!parsed.success)
     return NextResponse.json(
       { error: { message: "Bulk fields are invalid" } },
@@ -66,79 +65,18 @@ export async function PATCH(request: Request) {
       : {}),
     ...(parsed.data.tags ? { tags: parsed.data.tags } : {}),
   };
-  if (parsed.data.priceAdjustment !== undefined) {
-    const { data: rows, error: readError } = await auth.client
-      .from("products")
-      .select("id, base_price, price_mode")
-      .in("id", parsed.data.ids)
-      .is("deleted_at", null);
-    if (readError)
-      return NextResponse.json(
-        { error: { message: "Products could not be loaded" } },
-        { status: 500 },
-      );
-    if ((rows ?? []).some((row) => row.price_mode !== "fixed"))
-      return NextResponse.json(
-        {
-          error: {
-            message:
-              "Bulk price adjustments require fixed-price products; update weight-based pricing through metal rates or product pricing fields.",
-          },
-        },
-        { status: 422 },
-      );
-    for (const row of rows ?? []) {
-      const nextBasePrice = Math.max(
-        0,
-        Number(row.base_price ?? 0) + parsed.data.priceAdjustment,
-      );
-      const { error: updateError } = await auth.client
-        .from("products")
-        .update({
-          ...change,
-          base_price: nextBasePrice,
-          updated_by: auth.user.id,
-        })
-        .eq("id", row.id);
-      const { data: rawCalculation } = await auth.client
-        .rpc("calculate_product_price", { product_id: row.id })
-        .maybeSingle();
-      const calculation = rawCalculation as {
-        is_priceable?: boolean;
-        total?: number;
-      } | null;
-      const { error } = updateError
-        ? { error: updateError }
-        : await auth.client
-            .from("products")
-            .update({
-              display_price: calculation?.is_priceable
-                ? calculation.total
-                : null,
-              price_on_request: !calculation?.is_priceable,
-              updated_by: auth.user.id,
-            })
-            .eq("id", row.id);
-      if (error)
-        return NextResponse.json(
-          { error: { message: "Bulk update failed" } },
-          { status: 500 },
-        );
-    }
-  } else {
-    const { error } = await auth.client
-      .from("products")
-      .update({ ...change, updated_by: auth.user.id })
-      .in("id", parsed.data.ids)
-      .is("deleted_at", null);
-    if (error)
-      return NextResponse.json(
-        { error: { message: "Bulk update failed" } },
-        { status: 500 },
-      );
-  }
+  const { data, error } = await auth.client.rpc("bulk_update_products_atomic", {
+    p_ids: parsed.data.ids,
+    p_change: change,
+    p_price_adjustment: parsed.data.priceAdjustment ?? null,
+  });
+  if (error)
+    return NextResponse.json(
+      { error: { message: error.code === "22023" ? error.message : "Bulk update failed" } },
+      { status: error.code === "P0002" ? 404 : error.code === "22023" ? 422 : 500 },
+    );
   return NextResponse.json(
-    { data: { updated: parsed.data.ids.length } },
+    { data: { updated: data ?? 0 } },
     { headers: { "Cache-Control": "no-store" } },
   );
 }

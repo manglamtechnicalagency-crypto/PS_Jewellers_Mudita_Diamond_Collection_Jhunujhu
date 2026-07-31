@@ -4,6 +4,7 @@ import { isApplicationError } from "@/src/server/core/ApplicationError";
 import { ProductRepository, ProductService } from "@/src/server/features/products";
 import { PRODUCT_PAGE_SIZE } from "@/src/server/features/products/product.repository";
 import { publicObjectUrl } from "@/src/lib/r2-server";
+import { readJsonWithLimit } from "@/src/lib/request-body";
 
 const MAX_PAGE_SIZE = 100;
 
@@ -70,10 +71,10 @@ export async function POST(request: Request) {
     if (auth.error === "mfa_required") return errorResponse(401, "mfa_required", "Two-factor verification is required");
     if (auth.error === "forbidden") return errorResponse(403, "forbidden", "You do not have permission to create products");
 
-    let input: unknown;
-    try { input = await request.json(); } catch { return errorResponse(400, "invalid_json", "Request body must be valid JSON"); }
+    const bodyResult = await readJsonWithLimit(request, 256_000);
+    if (!bodyResult.ok) return errorResponse(bodyResult.reason === "too_large" ? 413 : 400, bodyResult.reason === "too_large" ? "payload_too_large" : "invalid_json", bodyResult.reason === "too_large" ? "Request body is too large" : "Request body must be valid JSON");
     const service = new ProductService(new ProductRepository(auth.client));
-    return NextResponse.json({ data: await service.create(input, auth.user.id) }, { status: 201, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ data: await service.create(bodyResult.value, auth.user.id) }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (isApplicationError(error)) return errorResponse(error.status, error.code, error.message);
     console.error("[admin-products] create_failed", { errorName: error instanceof Error ? error.name : "UnknownError" });

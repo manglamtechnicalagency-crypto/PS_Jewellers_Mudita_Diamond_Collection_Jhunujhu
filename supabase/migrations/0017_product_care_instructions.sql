@@ -1,7 +1,12 @@
 alter table public.products
   add column if not exists care_instructions text not null default '';
 
-create or replace view public.catalogue_products
+-- PostgreSQL cannot replace a view when its select list removes or inserts a
+-- column. The later classification migration also drops/recreates this view,
+-- so keep this migration deterministic for databases created from 0004.
+drop view if exists public.catalogue_products;
+
+create view public.catalogue_products
 with (security_invoker = true) as
   select
     p.id,

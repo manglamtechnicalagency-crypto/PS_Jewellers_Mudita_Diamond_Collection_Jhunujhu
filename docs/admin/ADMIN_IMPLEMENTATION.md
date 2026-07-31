@@ -15,7 +15,7 @@ The first production foundation is implemented at `/admin`:
 
 ## Setup
 
-1. Create a Supabase project and add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` to the server environment.
+1. Create a Supabase project and add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and the server-side Supabase URL/key variables from `.env.example` to the environment.
 2. Apply `supabase/migrations/0001_admin_foundation.sql` through the Supabase SQL editor or migration pipeline.
 3. Create an admin user in Supabase Auth, enroll a TOTP factor, and assign the user a role in `public.profiles`.
 4. Start the app and open `/admin`.

@@ -31,5 +31,3 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Browser smoke and accessibility checks
         run: npm run test:browser
-        env:
-          E2E_BASE_URL: ${{ vars.E2E_BASE_URL }}

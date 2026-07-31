@@ -14,6 +14,9 @@ function base(overrides: Record<string, unknown> = {}) {
     slug: "solitaire-ring",
     name: "Solitaire Ring",
     categoryId: CATEGORY_ID,
+    // Required with no default: the storefront category pages read this, and a
+    // guessed value is exactly the misclassification defect being prevented.
+    jewelleryCategory: "gold",
     basePrice: 50000,
     ...overrides,
   };
@@ -250,5 +253,31 @@ describe("createProductSchema — publishAt and status enums", () => {
 
   it("rejects an unknown stock status", () => {
     assert.ok(issuePaths(base({ stockStatus: "backordered" })).includes("stockStatus"));
+  });
+});
+
+describe("createProductSchema — jewellery category", () => {
+  it("rejects a payload with no jewellery category", () => {
+    const { jewelleryCategory: _omitted, ...withoutCategory } = base();
+    void _omitted;
+    const result = createProductSchema.safeParse(withoutCategory);
+    assert.equal(result.success, false);
+  });
+
+  it("rejects a value outside the canonical enum", () => {
+    assert.equal(createProductSchema.safeParse(base({ jewelleryCategory: "rose gold" })).success, false);
+    assert.equal(createProductSchema.safeParse(base({ jewelleryCategory: "Gold" })).success, false);
+    assert.equal(createProductSchema.safeParse(base({ jewelleryCategory: "" })).success, false);
+  });
+
+  it("accepts every canonical value", () => {
+    for (const value of ["gold", "silver", "diamond", "platinum"]) {
+      assert.equal(createProductSchema.safeParse(base({ jewelleryCategory: value })).success, true, value);
+    }
+  });
+
+  it("never defaults: an invalid category cannot silently become gold or diamond", () => {
+    const result = createProductSchema.safeParse(base({ jewelleryCategory: undefined }));
+    assert.equal(result.success, false);
   });
 });

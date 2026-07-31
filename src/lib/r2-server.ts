@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 /**
@@ -40,6 +40,10 @@ function getR2Client(): S3Client {
   return client;
 }
 
+function bucketForObject(objectKey: string): string {
+  return getEnv(objectKey.startsWith("quarantine/") ? "R2_QUARANTINE_BUCKET_NAME" : "R2_BUCKET_NAME");
+}
+
 /**
  * Returns a short-lived, single-object presigned PUT URL. The browser
  * uploads directly to R2 using this URL — the file bytes never pass through
@@ -51,7 +55,7 @@ export async function createUploadUrl(
   contentLength: number,
   expiresInSeconds = 300,
 ): Promise<string> {
-  const bucket = getEnv("R2_BUCKET_NAME");
+  const bucket = bucketForObject(objectKey);
   const command = new PutObjectCommand({
     Bucket: bucket,
     Key: objectKey,
@@ -66,7 +70,7 @@ export async function uploadObject(
   body: Uint8Array,
   contentType: string,
 ): Promise<void> {
-  const bucket = getEnv("R2_BUCKET_NAME");
+  const bucket = bucketForObject(objectKey);
   await getR2Client().send(new PutObjectCommand({
     Bucket: bucket,
     Key: objectKey,
@@ -77,11 +81,23 @@ export async function uploadObject(
 }
 
 export async function deleteObject(objectKey: string): Promise<void> {
-  const bucket = getEnv("R2_BUCKET_NAME");
+  const bucket = bucketForObject(objectKey);
   await getR2Client().send(new DeleteObjectCommand({ Bucket: bucket, Key: objectKey }));
 }
 
+export async function getObjectBytes(objectKey: string, maxBytes: number): Promise<Uint8Array> {
+  const bucket = bucketForObject(objectKey);
+  const response = await getR2Client().send(new GetObjectCommand({ Bucket: bucket, Key: objectKey }));
+  if (response.ContentLength !== undefined && response.ContentLength > maxBytes)
+    throw new Error("Stored media exceeds the allowed size");
+  if (!response.Body) throw new Error("Stored media has no body");
+  const bytes = await response.Body.transformToByteArray();
+  if (bytes.byteLength > maxBytes) throw new Error("Stored media exceeds the allowed size");
+  return bytes;
+}
+
 export function publicObjectUrl(objectKey: string): string | null {
+  if (objectKey.startsWith("quarantine/")) return null;
   const base = process.env.NEXT_PUBLIC_R2_PUBLIC_URL?.replace(/\/$/, "");
   return base ? `${base}/${objectKey.split("/").map(encodeURIComponent).join("/")}` : null;
 }

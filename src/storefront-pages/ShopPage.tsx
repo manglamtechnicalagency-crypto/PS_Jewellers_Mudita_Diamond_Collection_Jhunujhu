@@ -4,6 +4,7 @@ import ProductCard from "../components/ProductCard";
 // Deliberately does not import the seed catalogue: App always supplies the live
 // list, and importing src/data.ts here shipped it to every visitor.
 import type { AppState, Product } from "../types";
+import { matchesStorefrontFilter, sortByNewest } from "../lib/catalogue-filters";
 
 interface ShopPageProps {
   appState?: AppState;
@@ -11,23 +12,13 @@ interface ShopPageProps {
   title?: string;
   customProducts?: Product[];
   emptyMessage?: string;
+  /** New Arrivals opens on "Newest first" rather than catalogue order. */
+  initialSort?: SortKey;
 }
 
-type SortKey = "featured" | "rating";
+type SortKey = "featured" | "rating" | "newest";
 const metalFilters = ["Recommended", "Gold Jewellery", "Silver Jewellery", "Diamond Jewellery"];
 const typeFilters = ["Rings", "Earrings", "Necklaces"];
-
-function matchesInitial(product: Product, filter: string): boolean {
-  if (!filter || filter === "Recommended") return true;
-  const searchable = [product.name, product.category, product.collection, product.stoneType, ...product.tags].join(" ").toLowerCase();
-  if (filter === "Gold Jewellery") return product.purity.toLowerCase().includes("gold") || product.purity.includes("22K") || product.purity.includes("18K");
-  if (filter === "Silver Jewellery") return product.purity.toLowerCase().includes("silver");
-  if (filter === "Diamond Jewellery") return searchable.includes("diamond") || searchable.includes("cz") || product.collection.toLowerCase().includes("celeste");
-  if (filter === "Rings") return searchable.includes("ring") || searchable.includes("ring mount");
-  if (filter === "Earrings") return searchable.includes("earring") || searchable.includes("jhumka") || searchable.includes("tops");
-  if (filter === "Necklaces") return searchable.includes("necklace") || searchable.includes("haar") || searchable.includes("mangalsutra");
-  return false;
-}
 
 export default function ShopPage({
   appState,
@@ -35,9 +26,10 @@ export default function ShopPage({
   title = "Shop All Jewellery",
   customProducts,
   emptyMessage = "No jewellery found.",
+  initialSort = "featured",
 }: ShopPageProps) {
   const [category, setCategory] = useState(initialFilter);
-  const [sort, setSort] = useState<SortKey>("featured");
+  const [sort, setSort] = useState<SortKey>(initialSort);
   const list = customProducts ?? [];
   const searchTerm = (appState?.searchTerm || "").trim();
 
@@ -61,8 +53,9 @@ export default function ShopPage({
         .join(" ")
         .toLowerCase();
       const matchesSearch = terms.length === 0 || terms.every((term) => searchable.includes(term));
-      return matchesSearch && matchesInitial(product, category);
+      return matchesSearch && matchesStorefrontFilter(product, category);
     });
+    if (sort === "newest") return sortByNewest(searched);
     return [...searched].sort((a, b) => {
       if (sort === "rating") return b.rating - a.rating;
       return 0;
@@ -168,6 +161,7 @@ export default function ShopPage({
               className="min-h-11 rounded-xs border border-line bg-white px-3 text-sm text-ink"
             >
               <option value="featured">Featured</option>
+              <option value="newest">Newest First</option>
               <option value="rating">Top Rated</option>
             </select>
           </div>

@@ -5,6 +5,7 @@ import {
   requireAdmin,
   type AdminRole,
 } from "@/src/lib/admin-auth";
+import { readJsonWithLimit } from "@/src/lib/request-body";
 
 const updateSchema = z
   .object({
@@ -53,6 +54,14 @@ const updateSchema = z
       .enum(["draft", "review", "scheduled", "published", "archived"])
       .optional(),
     publishAt: z.string().datetime().nullable().optional(),
+    // Patch semantics: omitted means "leave unchanged". Editing media or the
+    // New Arrival flag therefore cannot clear the classification, and vice
+    // versa -- the two fields are independent by construction.
+    jewelleryCategory: z
+      .enum(["gold", "silver", "diamond", "platinum"], {
+        message: "Select a jewellery category: gold, silver, diamond or platinum.",
+      })
+      .optional(),
     isFeatured: z.boolean().optional(),
     isNewArrival: z.boolean().optional(),
     isBestSeller: z.boolean().optional(),
@@ -72,14 +81,7 @@ const updateSchema = z
   });
 
 const productSelect =
-  "id, sku, slug, name, short_description, long_description, care_instructions, category_id, subcategory_id, collection_id, metal_type, metal_purity, metal_weight_grams, gross_weight_grams, net_weight_grams, stone_type, stone_carat, stone_clarity, stone_colour, stone_count, certification, certificate_number, hallmark_code, size_options, price_mode, base_price, making_charges, wastage_percent, gst_percent, display_price, price_on_request, discount_type, discount_value, stock_quantity, reserved_quantity, low_stock_threshold, sold_at, stock_status, workflow_status, publish_at, is_featured, is_new_arrival, is_best_seller, status, display_order, tags, seo_title, seo_description, seo_keywords, created_at, updated_at";
-const productSelectWithoutCare = productSelect.replace(", care_instructions", "");
-
-function isMissingCareInstructionsColumn(error: { code?: string; message?: string; details?: string } | null) {
-  if (!error) return false;
-  return error.code === "42703" || error.code === "PGRST204" || `${error.message ?? ""} ${error.details ?? ""}`.toLowerCase().includes("care_instructions");
-}
-
+  "id, sku, slug, name, short_description, long_description, care_instructions, category_id, subcategory_id, collection_id, jewellery_category, metal_type, metal_purity, metal_weight_grams, gross_weight_grams, net_weight_grams, stone_type, stone_carat, stone_clarity, stone_colour, stone_count, certification, certificate_number, hallmark_code, size_options, price_mode, base_price, making_charges, wastage_percent, gst_percent, display_price, price_on_request, discount_type, discount_value, stock_quantity, reserved_quantity, low_stock_threshold, sold_at, stock_status, workflow_status, publish_at, is_featured, is_new_arrival, is_best_seller, status, display_order, tags, seo_title, seo_description, seo_keywords, created_at, updated_at";
 function errorResponse(status: number, code: string, message: string) {
   return NextResponse.json(
     { error: { code, message } },
@@ -150,17 +152,15 @@ export async function PATCH(
   const { id } = await params;
   if (!z.string().uuid().safeParse(id).success)
     return errorResponse(422, "validation_error", "Product id is invalid");
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
+  const bodyResult = await readJsonWithLimit(request, 256_000);
+  if (!bodyResult.ok) {
     return errorResponse(
-      400,
-      "invalid_json",
-      "Request body must be valid JSON",
+      bodyResult.reason === "too_large" ? 413 : 400,
+      bodyResult.reason === "too_large" ? "payload_too_large" : "invalid_json",
+      bodyResult.reason === "too_large" ? "Request body is too large" : "Request body must be valid JSON",
     );
   }
-  const parsed = updateSchema.safeParse(body);
+  const parsed = updateSchema.safeParse(bodyResult.value);
   if (!parsed.success)
     return errorResponse(422, "validation_error", parsed.error.issues[0]?.message ?? "Product fields are invalid");
   const product = parsed.data;
@@ -267,6 +267,9 @@ export async function PATCH(
     ...(product.publishAt === undefined
       ? {}
       : { publish_at: product.publishAt }),
+    ...(product.jewelleryCategory === undefined
+      ? {}
+      : { jewellery_category: product.jewelleryCategory }),
     ...(product.isFeatured === undefined
       ? {}
       : { is_featured: product.isFeatured }),
@@ -291,32 +294,10 @@ export async function PATCH(
     ...(product.priceMode === "on_request"
       ? { price_on_request: true, display_price: null }
       : {}),
-    updated_by: gate.auth.user.id,
   };
-  let { data: updated, error } = await gate.auth.client
-    .from("products")
-    .update(update)
-    .eq("id", id)
-    .is("deleted_at", null)
-    .select(productSelect)
+  const { data: updated, error } = await gate.auth.client
+    .rpc("save_product_atomic", { p_product_id: id, p_update: update })
     .single();
-  if (isMissingCareInstructionsColumn(error)) {
-    // The column is absent on databases that have not run
-    // 0017_product_care_instructions.sql. Retrying with the same payload was a
-    // no-op bug: `care_instructions` had to come out of the WRITE too, not just
-    // the projection, or Postgres rejects it identically every time. The admin
-    // editor always sends the field (even as ""), so without this every product
-    // save on such a database fails with a bare "Product could not be updated".
-    const { care_instructions: _omitted, ...updateWithoutCare } = update as Record<string, unknown>;
-    void _omitted;
-    ({ data: updated, error } = await gate.auth.client
-      .from("products")
-      .update(updateWithoutCare)
-      .eq("id", id)
-      .is("deleted_at", null)
-      .select(productSelectWithoutCare)
-      .single());
-  }
   if (error) {
     // Without this the real cause never reaches anyone: the client is told
     // "Product could not be updated" by design, and nothing was logged, so the
@@ -328,79 +309,12 @@ export async function PATCH(
       message: error.message,
     });
     return errorResponse(
-      error.code === "23505" ? 409 : 500,
-      error.code === "23505" ? "duplicate_product" : "database_error",
+      error.code === "23505" ? 409 : error.code === "P0002" ? 404 : 500,
+      error.code === "23505" ? "duplicate_product" : error.code === "P0002" ? "not_found" : "database_error",
       error.code === "23505"
         ? "SKU or slug already exists"
         : "Product could not be updated",
     );
-  }
-  // "Price on request" must never be recalculated away.
-  //
-  // The conditions below are almost all "did the client send this field?", and
-  // the product editor sends every one of them on every save. So this block ran
-  // even when the operator had just chosen on_request, and the branch inside it
-  // writes `price_on_request: false` unconditionally — silently undoing the
-  // `price_on_request: true` written moments earlier in the same request. The
-  // admin UI then reported "pricing recalculated live" and the storefront kept
-  // showing a price.
-  //
-  // An explicit on_request choice is a decision, not a missing input, so it
-  // wins over the calculator.
-  if (
-    product.priceMode !== "on_request" &&
-    (product.priceMode === "fixed" ||
-    product.priceMode === "weight_based" ||
-    product.basePrice !== undefined ||
-    product.metalType !== undefined ||
-    product.metalPurity !== undefined ||
-    product.netWeightGrams !== undefined ||
-    product.makingCharges !== undefined ||
-    product.wastagePercent !== undefined ||
-    product.gstPercent !== undefined ||
-    product.discountType !== undefined ||
-    product.discountValue !== undefined)
-  ) {
-    const { data: rawCalculation } = await gate.auth.client
-      .rpc("calculate_product_price", { product_id: id })
-      .maybeSingle();
-    const calculation = rawCalculation as {
-      is_priceable?: boolean;
-      total?: number;
-    } | null;
-    if (calculation?.is_priceable) {
-      const { data: repriced } = await gate.auth.client
-        .from("products")
-        .update({
-          display_price: calculation.total,
-          price_on_request: false,
-          updated_by: gate.auth.user.id,
-        })
-        .eq("id", id)
-        .select(productSelect)
-        .single();
-      if (repriced)
-        return NextResponse.json(
-          { data: repriced, pricing: calculation },
-          { headers: { "Cache-Control": "no-store" } },
-        );
-    } else if (product.priceMode === "weight_based") {
-      const { data: requestOnly } = await gate.auth.client
-        .from("products")
-        .update({
-          display_price: null,
-          price_on_request: true,
-          updated_by: gate.auth.user.id,
-        })
-        .eq("id", id)
-        .select(productSelect)
-        .single();
-      if (requestOnly)
-        return NextResponse.json(
-          { data: requestOnly, pricing: calculation },
-          { headers: { "Cache-Control": "no-store" } },
-        );
-    }
   }
   return NextResponse.json(
     { data: updated },

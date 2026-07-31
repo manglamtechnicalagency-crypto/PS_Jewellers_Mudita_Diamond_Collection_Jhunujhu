@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hasValidSameOrigin } from "@/src/lib/request-origin";
-import { createSupabaseServerClient } from "@/src/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/src/lib/supabase/service";
 import { consumeUploadRateLimit, getTrustedClientKey } from "@/src/lib/upload-rate-limit";
+import { readJsonWithLimit } from "@/src/lib/request-body";
 
 /**
  * Public product reviews: read approved ones, submit a new one.
@@ -22,6 +23,7 @@ import { consumeUploadRateLimit, getTrustedClientKey } from "@/src/lib/upload-ra
  */
 
 const MAX_REVIEWS = 50;
+const MAX_REVIEW_BYTES = 16_000;
 
 const submitSchema = z
   .object({
@@ -46,7 +48,7 @@ export async function GET(request: Request) {
     return errorResponse(422, "validation_error", "A valid product id is required");
   }
 
-  const client = await createSupabaseServerClient();
+  const client = createSupabaseServiceClient();
   if (!client) return errorResponse(503, "not_configured", "Reviews are temporarily unavailable");
 
   const { data, error } = await client
@@ -88,24 +90,20 @@ export async function POST(request: Request) {
     );
   }
 
-  const contentLength = Number(request.headers.get("content-length") ?? 0);
-  if (contentLength > 16_000) {
-    return errorResponse(413, "payload_too_large", "Review is too long");
+  const bodyResult = await readJsonWithLimit(request, MAX_REVIEW_BYTES);
+  if (!bodyResult.ok) {
+    return bodyResult.reason === "too_large"
+      ? errorResponse(413, "payload_too_large", "Review is too long")
+      : errorResponse(400, "invalid_json", "Request body must be valid JSON");
   }
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return errorResponse(400, "invalid_json", "Request body must be valid JSON");
-  }
+  const body = bodyResult.value;
 
   const parsed = submitSchema.safeParse(body);
   if (!parsed.success) {
     return errorResponse(422, "validation_error", "Please check the rating, review and email and try again");
   }
 
-  const client = await createSupabaseServerClient();
+  const client = createSupabaseServiceClient();
   if (!client) return errorResponse(503, "not_configured", "Reviews are temporarily unavailable");
 
   const { error } = await client.from("product_reviews").insert({

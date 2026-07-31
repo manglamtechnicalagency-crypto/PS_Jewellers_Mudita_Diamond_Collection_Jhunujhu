@@ -212,7 +212,7 @@ nonce-based CSP via middleware/`proxy.ts` and `strict-dynamic`.
 ### 9. 🟡 `img-src` will block your own uploaded images
 
 `next.config.ts:19` — `img-src 'self' data: https://images.unsplash.com`. The presign route returns
-`publicUrl` built from `NEXT_PUBLIC_R2_PUBLIC_URL` (`app/api/r2-presign/route.ts:88-91`). Any image
+`publicUrl` built from `NEXT_PUBLIC_R2_PUBLIC_URL` (`app/api/admin/media/presign/route.ts`). Any image
 served from that host will be blocked once the admin media library goes live. Add the R2 public
 origin.
 
@@ -275,10 +275,9 @@ bundle), but a template file should carry a placeholder.
 
 ## What looks good
 
-- **`app/api/r2-presign/route.ts`** is the strongest file in the repo: constant-time token compare,
-  streaming body cap enforced independently of `Content-Length`, strict-shape body validation, MIME
-  allowlist driving the extension (so the key can't be attacker-controlled), UUID keys, 5-minute
-  expiry, `ContentLength` bound into the signature, and errors that leak only `error.name`.
+- **`app/api/admin/media/presign/route.ts`** is the current upload gate: Supabase session and AAL2,
+  editor-level authorization, strict body validation, MIME allowlist driving the extension, UUID
+  keys, short-lived presigned URLs, and safe errors.
 - **RLS is on and policies are role-scoped**, with `is_admin()` / `is_admin_or_editor()` as
   `security definer ... set search_path = public` — the correct pattern.
 - **Zod schema is `.strict()`** with bounded lengths and a slug regex; `23505` mapped to 409.

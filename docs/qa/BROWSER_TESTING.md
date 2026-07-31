@@ -7,7 +7,7 @@ npm run test:browser:install
 npm run test:browser
 ```
 
-The suite defaults to the deployed showroom. Use `E2E_BASE_URL` for a local or staging deployment.
+The suite defaults to `http://127.0.0.1:3000` and starts the built app. Set `E2E_BASE_URL` only for an isolated staging deployment.
 
 Authenticated admin checks require an isolated staging Supabase session saved as Playwright storage state:
 

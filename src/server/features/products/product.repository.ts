@@ -31,25 +31,6 @@ export class ProductRepository {
       .range(offset, offset + limit - 1);
   }
 
-  /**
-   * Recalculates display_price from the pricing inputs, the same way the update
-   * route does. Without this a newly created product carries a null
-   * display_price and the storefront shows "On request" until someone opens the
-   * product and saves it again.
-   */
-  async reprice(productId: string, actorId: string) {
-    const { data: rawCalculation } = await this.client.rpc("calculate_product_price", { product_id: productId }).maybeSingle();
-    const calculation = rawCalculation as { is_priceable?: boolean; total?: number } | null;
-    if (!calculation?.is_priceable) return null;
-    const { data } = await this.client
-      .from("products")
-      .update({ display_price: calculation.total, price_on_request: false, updated_by: actorId })
-      .eq("id", productId)
-      .select("id, slug, name, status")
-      .single();
-    return data;
-  }
-
   async create(input: CreateProductInput & { actorId: string }) {
     const values = {
       // An operator-supplied SKU wins; otherwise generate a unique placeholder.
@@ -75,6 +56,7 @@ export class ProductRepository {
       certificate_number: input.certificateNumber,
       hallmark_code: input.hallmarkCode,
       collection_id: input.collectionId,
+      jewellery_category: input.jewelleryCategory,
       size_options: input.sizeOptions,
       price_mode: input.priceMode,
       base_price: input.basePrice,
@@ -96,19 +78,9 @@ export class ProductRepository {
       seo_title: input.seoTitle,
       seo_description: input.seoDescription,
       seo_keywords: input.seoKeywords,
-      created_by: input.actorId,
-      updated_by: input.actorId,
     };
-    const result = await this.client.from("products").insert(values).select("id, slug, name, status").single();
-    const missingCareInstructionsColumn = result.error && (
-      result.error.code === "42703" ||
-      result.error.code === "PGRST204" ||
-      `${result.error.message ?? ""} ${result.error.details ?? ""}`.toLowerCase().includes("care_instructions")
-    );
-    if (!missingCareInstructionsColumn) return result;
-    // Keep product creation compatible until the optional care-instructions migration is applied.
-    const legacyValues = { ...values } as Record<string, unknown>;
-    delete legacyValues.care_instructions;
-    return this.client.from("products").insert(legacyValues).select("id, slug, name, status").single();
+    return this.client
+      .rpc("save_product_atomic", { p_product_id: null, p_update: values })
+      .single();
   }
 }

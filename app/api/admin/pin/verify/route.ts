@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hasValidSameOrigin, requireAdmin } from "@/src/lib/admin-auth";
+import { readJsonWithLimit } from "@/src/lib/request-body";
 
 /**
  * Verifies the idle-lock PIN for the current session.
@@ -25,9 +26,9 @@ export async function POST(request: Request) {
   if (auth.error === "internal") return errorResponse(500, "internal_error", "Admin authentication is temporarily unavailable");
   if (auth.error === "forbidden") return errorResponse(403, "forbidden", "Your account is not assigned an admin role");
 
-  let body: unknown;
-  try { body = await request.json(); } catch { return errorResponse(400, "invalid_json", "Request body must be valid JSON"); }
-  const parsed = bodySchema.safeParse(body);
+  const bodyResult = await readJsonWithLimit(request, 4_096);
+  if (!bodyResult.ok) return errorResponse(bodyResult.reason === "too_large" ? 413 : 400, bodyResult.reason === "too_large" ? "payload_too_large" : "invalid_json", bodyResult.reason === "too_large" ? "Request body is too large" : "Request body must be valid JSON");
+  const parsed = bodySchema.safeParse(bodyResult.value);
   // A malformed PIN is treated as a wrong PIN rather than a distinct error, so
   // the response shape gives an attacker nothing extra to work with.
   if (!parsed.success) return NextResponse.json({ data: { status: "invalid", remainingAttempts: null } }, { status: 401, headers: { "Cache-Control": "no-store" } });

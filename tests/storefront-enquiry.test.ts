@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { generateWhatsAppMessage, whatsappHref } from "../src/lib/storefront-enquiry.ts";
+import type { Product } from "../src/types.ts";
 
 const product = {
   id: "PSJ-TEST-001",
@@ -26,12 +27,15 @@ const product = {
   reviewsCount: 0,
   badge: "Best Seller",
   tags: ["ring"],
+  jewelleryCategory: "gold",
+  isNewArrival: false,
+  publishedAt: "2026-01-01T00:00:00.000Z",
   highlights: [],
   description: "A classic halo silhouette.",
   specs: {},
   care: [],
   reviews: [],
-};
+} satisfies Product;
 
 describe("generateWhatsappMessage", () => {
   it("includes product context and the requested pricing checklist", () => {

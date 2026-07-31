@@ -6,6 +6,7 @@ import {
   SIMPLE_ROUTES,
   filterProductsForRoute,
   findCatalogueRoute,
+  isCatalogueDependentPath,
   isRenderablePath,
   renderablePaths,
 } from "../src/lib/storefront-routes.ts";
@@ -18,12 +19,21 @@ function product(overrides: Partial<Product> = {}): Product {
     sku: "SKU", price: 1000, offerPrice: 1000, discount: "", availability: "In Stock",
     hallmark: "", certification: "", purity: "22K", weight: "5 g", stoneType: "", occasion: "",
     image: "a.jpg", images: ["a.jpg"], rating: 0, reviewsCount: 0, badge: "", tags: [],
+    jewelleryCategory: "gold", isNewArrival: false, publishedAt: "2026-01-01T00:00:00.000Z",
     highlights: [], description: "", specs: {}, care: [], reviews: [],
     ...overrides,
   };
 }
 
 describe("storefront route table", () => {
+  it("keeps content routes available when catalogue storage is down", () => {
+    for (const path of ["/contact", "/faq", "/privacy-policy", "/store-locator"]) {
+      assert.equal(isCatalogueDependentPath(path), false, path);
+    }
+    for (const path of ["/", "/shop", "/gold-jewellery", "/product/example"]) {
+      assert.equal(isCatalogueDependentPath(path), true, path);
+    }
+  });
   it("every navigation link resolves to a renderable path", () => {
     // The regression this guards: New In, Bridal and Offers sat in the header
     // pointing at paths the router did not handle, returning a 404 body at 200.
@@ -60,7 +70,11 @@ describe("storefront route table", () => {
 
 describe("filterProductsForRoute", () => {
   const items = [
-    product({ id: "new", badge: "New Arrival" }),
+    // Badge text is editorial. New Arrivals is driven by the isNewArrival flag,
+    // so this row carries both to prove the flag is what is read.
+    product({ id: "new", badge: "New Arrival", isNewArrival: true, publishedAt: "2026-06-01T00:00:00.000Z" }),
+    // Badge says "New Arrival" but the flag is off: must NOT be listed.
+    product({ id: "badge-only", badge: "New Arrival", isNewArrival: false }),
     product({ id: "best", badge: "Best Seller" }),
     product({ id: "sale", discount: "10% off", price: 1000, offerPrice: 900 }),
     product({ id: "onrequest", priceOnRequest: true, discount: "10% off" }),
@@ -73,7 +87,7 @@ describe("filterProductsForRoute", () => {
     return filterProductsForRoute(route, items).map((item) => item.id);
   };
 
-  it("filters new arrivals and best sellers by badge", () => {
+  it("filters new arrivals by the isNewArrival flag, not badge text", () => {
     assert.deepEqual(run("/new-arrivals"), ["new"]);
     assert.deepEqual(run("/best-sellers"), ["best"]);
   });

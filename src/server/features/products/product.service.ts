@@ -27,10 +27,6 @@ export class ProductService {
         : "A product with these details already exists.";
       throw new ApplicationError(duplicate ? message : "Product could not be created", duplicate ? "duplicate_product" : "database_error", duplicate ? 409 : 500);
     }
-    // Price the product immediately. A create that skipped this left
-    // display_price null, so the storefront rendered "On request" for a product
-    // that had a perfectly good price until someone re-saved it by hand.
-    const repriced = await this.repository.reprice(result.data.id, actorId);
-    return repriced ?? result.data;
+    return result.data;
   }
 }

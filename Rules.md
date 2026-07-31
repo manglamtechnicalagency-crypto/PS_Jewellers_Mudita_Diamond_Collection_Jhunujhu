@@ -1,6 +1,8 @@
 # AI Development Rules
 
-> **Current implementation correction — 2026-07-24:** Use Next.js App Router and TypeScript/Tailwind only. Do not reintroduce Vite, Supabase, Sanity, browser upload credentials, or `src/assets` imports. Backend changes must preserve server-side validation and authorization for `POST /api/r2-presign`; consult `docs/security/` first. Where text below conflicts with this correction or `Memory.md`, this correction and `Memory.md` win.
+> **Current project baseline — 2026-07-31:** This is a deployed Next.js 16 App Router + React 19 + TypeScript project on Vercel. Supabase/Postgres is wired for catalogue, settings, enquiries, media metadata, and admin workflows; Cloudflare R2 is wired for media; Upstash Redis is optional shared rate limiting. Use `app/` and `src/` as the live code surface. Do not describe this repository as a Vite SPA, backend-less demo, or Sanity scaffold. Supabase migrations through `0023` are the current schema baseline.
+
+> **Security correction:** Use Next.js App Router and TypeScript/Tailwind only. Never expose Supabase secret keys, R2 access keys, quarantine credentials, or Upstash tokens to the browser. Preserve validation, authorization, CSRF/origin checks, rate limits, and safe errors on every server route. Where historical text below conflicts with this correction, the current code and this notice win.
 
 ## 1. Purpose
 

@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hasValidSameOrigin, requireAdmin } from "@/src/lib/admin-auth";
+import { readJsonWithLimit } from "@/src/lib/request-body";
 
 const columns = [
   "slug",
   "name",
   "categorySlug",
+  // Required: a CSV import writes straight to the table, bypassing
+  // createProductSchema. Without this column every imported product landed with
+  // a NULL jewellery_category and was invisible on every category page, with no
+  // error to explain why.
+  "jewelleryCategory",
   "collectionSlug",
   "priceMode",
   "basePrice",
@@ -94,6 +100,11 @@ function parseCsv(csv: string): { rows: Row[]; errors: string[] } {
       (!Number.isFinite(Number(row.basePrice)) || Number(row.basePrice) < 0)
     )
       errors.push(`Row ${index + 2}: basePrice is invalid`);
+    if (
+      (!row.priceMode || row.priceMode === "fixed") &&
+      (!row.basePrice || !Number.isFinite(Number(row.basePrice)) || Number(row.basePrice) <= 0)
+    )
+      errors.push(`Row ${index + 2}: fixed products require a positive basePrice`);
     if (row.stockQuantity && (!Number.isInteger(Number(row.stockQuantity)) || Number(row.stockQuantity) < 0))
       errors.push(`Row ${index + 2}: stockQuantity is invalid`);
     if (row.status && !["draft", "published", "archived"].includes(row.status))
@@ -124,14 +135,12 @@ export async function POST(request: Request) {
       "unauthorized",
       "You do not have permission to import products",
     );
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
+  const bodyResult = await readJsonWithLimit(request, 2_100_000);
+  if (!bodyResult.ok) {
     return errorResponse(
-      400,
-      "invalid_json",
-      "Request body must be valid JSON",
+      bodyResult.reason === "too_large" ? 413 : 400,
+      bodyResult.reason === "too_large" ? "payload_too_large" : "invalid_json",
+      bodyResult.reason === "too_large" ? "Request body is too large" : "Request body must be valid JSON",
     );
   }
   const parsed = z
@@ -140,7 +149,7 @@ export async function POST(request: Request) {
       commit: z.boolean().default(false),
     })
     .strict()
-    .safeParse(body);
+    .safeParse(bodyResult.value);
   if (!parsed.success)
     return errorResponse(
       422,
@@ -198,6 +207,20 @@ export async function POST(request: Request) {
       "CSV contains unknown categories",
       missing,
     );
+  const invalidCategories = [
+    ...new Set(
+      parsedCsv.rows
+        .map((row) => row.jewelleryCategory.trim().toLowerCase())
+        .filter((value) => !["gold", "silver", "diamond", "platinum"].includes(value)),
+    ),
+  ];
+  if (invalidCategories.length)
+    return errorResponse(
+      422,
+      "validation_error",
+      "jewelleryCategory must be gold, silver, diamond or platinum",
+      invalidCategories,
+    );
   const missingCollections = collectionSlugs.filter(
     (slug) => !collectionMap.has(slug),
   );
@@ -213,6 +236,7 @@ export async function POST(request: Request) {
     slug: row.slug,
     name: row.name,
     category_id: categoryMap.get(row.categorySlug),
+    jewellery_category: row.jewelleryCategory.trim().toLowerCase(),
     collection_id: row.collectionSlug
       ? collectionMap.get(row.collectionSlug)
       : null,
@@ -220,23 +244,19 @@ export async function POST(request: Request) {
     base_price: row.basePrice ? Number(row.basePrice) : null,
     stock_quantity: row.stockQuantity ? Number(row.stockQuantity) : 0,
     status: row.status || "draft",
-    created_by: auth.user.id,
-    updated_by: auth.user.id,
   }));
-  const { data, error } = await auth.client
-    .from("products")
-    .insert(rows)
-    .select("id, slug, name, status");
+  const { data, error } = await auth.client.rpc("import_products_atomic", { p_rows: rows });
   if (error)
     return errorResponse(
-      error.code === "23505" ? 409 : 500,
-      error.code === "23505" ? "duplicate_product" : "database_error",
+      error.code === "23505" ? 409 : error.code === "22023" ? 422 : 500,
+      error.code === "23505" ? "duplicate_product" : error.code === "22023" ? "validation_error" : "database_error",
       error.code === "23505"
         ? "CSV contains a duplicate slug"
-        : "Products could not be imported",
+      : "Products could not be imported",
     );
+  const products = Array.isArray(data) ? data : [];
   return NextResponse.json(
-    { data: { created: data?.length ?? 0, products: data ?? [] } },
+    { data: { created: products.length, products } },
     { status: 201, headers: { "Cache-Control": "no-store" } },
   );
 }

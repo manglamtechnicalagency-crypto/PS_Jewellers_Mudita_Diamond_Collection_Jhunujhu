@@ -1,14 +1,16 @@
 # Development Phases
 
-> **Current implementation correction — 2026-07-24:** Phase 1 is in progress: Next.js migration, PS Jewellers rebrand, obsolete integration cleanup, and R2 presign security hardening have been implemented. Type checking passes. Production build rerun is pending because a user-owned Next development process currently holds the build lock. `Memory.md` is the current phase record.
+> **Current delivery status — 2026-07-31:** Core implementation is complete through database and infrastructure integration. Supabase migrations `0001`–`0023` are applied remotely and locally; R2 buckets exist; Vercel is the production target. Remaining release work is environment-variable verification, a fresh production deployment, endpoint smoke checks, accessibility/UX hardening, and the R2 quarantine verification worker. Historical phase descriptions below remain roadmap context; this status block is authoritative.
+
+> **Implementation correction:** The Next.js migration, PS Jewellers rebrand, Supabase integration, R2 presign security hardening, migrations, tests, type-check, and production build have been completed. Do not reset status to the old Vite/backend-less baseline.
 
 ## 1. Roadmap Overview
 
-- **Current project stage:** Working front-end-only demo (React + Vite SPA). No backend. Contains unresolved dead code from the project's origin as a photography-portfolio clone.
+- **Current project stage:** Working Vercel-hosted Next.js showroom with Supabase catalogue/admin workflows and Cloudflare R2 media integration. Some legacy photography files remain archived/non-runtime.
 - **MVP target:** The current demo already satisfies a "presentable client demo" MVP for browsing/cart/wishlist/checkout-UI. What's missing is cleanup, correctness fixes, and documentation-driven guardrails — covered in Phases 0–3 below. Phases 4+ only apply if the stakeholder confirms the goal is a real, transactable store (see PRD.md Open Questions).
 - **Total planned phases:** 9 (0–8). Phases 4–8 are conditional on stakeholder confirmation that a production store is the goal.
 - **Phase dependency summary:** Phases 0–3 are sequential and unconditional. Phases 4–8 depend on Phase 3 and on stakeholder answers to PRD.md §23 Open Questions.
-- **Release strategy:** Continuous deployment to static hosting (Vercel/Netlify) is already configured; no formal release process exists today. Phase 3 introduces a minimal CI check before any further phase begins.
+- **Release strategy:** Vercel production deployment. Environment changes require a new deployment; validate `/api/catalogue`, `/api/public/settings`, and `/api/public/site-media` after release.
 
 ## 2. Phase Status Legend
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hasValidSameOrigin, requireAdmin } from "@/src/lib/admin-auth";
+import { readJsonWithLimit } from "@/src/lib/request-body";
 
 const termSchema = z.object({
   kind: z.enum(["category", "collection", "subcategory"]),
@@ -35,9 +36,9 @@ export async function GET() {
 export async function POST(request: Request) {
   const gate = await writeGate(request);
   if ("response" in gate) return gate.response;
-  let body: unknown;
-  try { body = await request.json(); } catch { return response(400, "invalid_json", "Request body must be valid JSON"); }
-  const parsed = termSchema.safeParse(body);
+  const bodyResult = await readJsonWithLimit(request, 32_000);
+  if (!bodyResult.ok) return response(bodyResult.reason === "too_large" ? 413 : 400, bodyResult.reason === "too_large" ? "payload_too_large" : "invalid_json", bodyResult.reason === "too_large" ? "Request body is too large" : "Request body must be valid JSON");
+  const parsed = termSchema.safeParse(bodyResult.value);
   if (!parsed.success) return response(422, "validation_error", "Taxonomy fields are invalid");
   const term = parsed.data;
   const { data, error } = await gate.auth.client.from("taxonomy_terms").insert({ kind: term.kind, name: term.name, slug: term.slug, parent_id: term.parentId ?? null, display_order: term.displayOrder }).select("id, kind, name, slug, parent_id, display_order, is_active").single();
@@ -50,9 +51,9 @@ export async function PATCH(request: Request) {
   if ("response" in gate) return gate.response;
   const id = new URL(request.url).searchParams.get("id");
   if (!id || !z.string().uuid().safeParse(id).success) return response(422, "validation_error", "Taxonomy id is invalid");
-  let body: unknown;
-  try { body = await request.json(); } catch { return response(400, "invalid_json", "Request body must be valid JSON"); }
-  const parsed = termSchema.partial().safeParse(body);
+  const bodyResult = await readJsonWithLimit(request, 32_000);
+  if (!bodyResult.ok) return response(bodyResult.reason === "too_large" ? 413 : 400, bodyResult.reason === "too_large" ? "payload_too_large" : "invalid_json", bodyResult.reason === "too_large" ? "Request body is too large" : "Request body must be valid JSON");
+  const parsed = termSchema.partial().safeParse(bodyResult.value);
   if (!parsed.success) return response(422, "validation_error", "Taxonomy fields are invalid");
   const term = parsed.data;
   const update = { ...(term.kind === undefined ? {} : { kind: term.kind }), ...(term.name === undefined ? {} : { name: term.name }), ...(term.slug === undefined ? {} : { slug: term.slug }), ...(term.parentId === undefined ? {} : { parent_id: term.parentId }), ...(term.displayOrder === undefined ? {} : { display_order: term.displayOrder }) };
