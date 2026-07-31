@@ -148,12 +148,19 @@ export default function MediaManager() {
     setBusy(true);
     setMessage("");
     try {
-      const uploadDetails = {
-        contentType: file.type,
-        fileSize: file.size,
-        ...(productId ? { productId } : {}),
-        ...(!productId && sectionKey ? { sectionKey } : {}),
-      };
+      if (!productId && sectionKey) {
+        const form = new FormData();
+        form.set("file", file);
+        form.set("sectionKey", sectionKey);
+        form.set("title", title);
+        form.set("altText", altText);
+        const response = await fetch("/api/admin/media/upload-site", { method: "POST", body: form });
+        const payload = (await response.json()) as { error?: { message: string } };
+        if (!response.ok) throw new Error(payload.error?.message ?? "Media upload failed");
+        setFile(null); setTitle(""); setAltText(""); setSectionKey(""); setRole("gallery");
+        setMessage("Media uploaded and synchronized."); await syncD1(); await load(); return;
+      }
+      const uploadDetails = { contentType: file.type, fileSize: file.size, ...(productId ? { productId } : {}) };
       const presignResponse = await fetch("/api/admin/media/presign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
